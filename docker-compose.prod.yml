@@ -1,0 +1,25 @@
+# Production stack: Traefik (external `proxy` network) terminates TLS and
+# routes duka.twendedigital.tech to this container on port 80. Requires .env
+# beside this file — `env_file` entries below fail loudly when it is missing.
+name: duka-frontend-prod
+
+services:
+  app:
+    image: ${FRONTEND_IMAGE:-duka_frontend:latest}
+    container_name: duka_frontend_app
+    restart: always
+    env_file:
+      - .env
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.duka_frontend.rule=Host(`${FRONTEND_HOST:-duka.twendedigital.tech}`)"
+      - "traefik.http.routers.duka_frontend.entrypoints=websecure"
+      - "traefik.http.routers.duka_frontend.tls.certresolver=myresolver"
+      - "traefik.http.routers.duka_frontend.service=duka_frontend_service"
+      - "traefik.http.services.duka_frontend_service.loadbalancer.server.port=80"
+
+networks:
+  proxy:
+    external: true

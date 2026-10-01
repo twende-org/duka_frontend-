@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Main landing page -->
+  <url>
+    <loc>https://duka.twendedigital.tech/</loc>
+    <lastmod>2026-07-12</lastmod>
+  </url>
+  <!-- Shop Directory -->
+  <url>
+    <loc>https://duka.twendedigital.tech/explore</loc>
+    <lastmod>2026-07-12</lastmod>
+  </url>
+  <!-- POS System info page -->
+  <url>
+    <loc>https://duka.twendedigital.tech/duka-pos-system</loc>
+    <lastmod>2026-07-12</lastmod>
+  </url>
+  <!-- Twende Digital info page -->
+  <url>
+    <loc>https://duka.twendedigital.tech/twendedigital</loc>
+    <lastmod>2026-07-12</lastmod>
+  </url>
+  <!-- Twende Duka info page -->
+  <url>
+    <loc>https://duka.twendedigital.tech/twende-duka</loc>
+    <lastmod>2026-07-12</lastmod>
+  </url>
+</urlset>

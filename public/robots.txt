@@ -1,0 +1,33 @@
+# Twende Duka Marketplace - Search Engine Configuration
+# Target Domain: https://duka.twendedigital.tech
+
+User-agent: *
+# Allow indexing of all public shop and product discovery pages
+Allow: /
+Allow: /marketplace
+Allow: /explore
+Allow: /shop/
+Allow: /shop/*
+Allow: /store/
+Allow: /store/*
+Allow: /duka-pos-system
+Allow: /twendedigital
+Allow: /twende-duka
+Allow: /login
+Allow: /register
+
+# Disallow indexing of private dashboards and management interfaces
+# All management routes now live under /dashboard/
+Disallow: /dashboard/
+Disallow: /app/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Ensure Googlebot-Image can crawl product visuals for Google Lens & Image Search
+User-agent: Googlebot-Image
+Allow: /
+
+# Host & Sitemap
+Sitemap: https://duka.twendedigital.tech/sitemap.xml

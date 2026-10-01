@@ -1,0 +1,226 @@
+{
+  "directory.vision.0": {
+    "sw": "MAONO YETU",
+    "en": "PLATFORM VISION"
+  },
+  "directory.vision.1": {
+    "sw": "Muunganiko Kamili wa",
+    "en": "The Complete Ecosystem for"
+  },
+  "directory.vision.2": {
+    "sw": "Biashara Mtandaoni",
+    "en": "Digital Commerce"
+  },
+  "directory.vision.3": {
+    "sw": "Anza Kununua",
+    "en": "Start Shopping"
+  },
+  "directory.vision.4": {
+    "sw": "Anza Kuuza",
+    "en": "Start Selling"
+  },
+  "directory.vision.5": {
+    "sw": "Kwa Nini Twende Duka?",
+    "en": "The Problem We Solve"
+  },
+  "directory.vision.6": {
+    "sw": "Kwa Wafanyabiashara",
+    "en": "For Businesses"
+  },
+  "directory.vision.7": {
+    "sw": "Ugumu wa kuonekana mtandaoni",
+    "en": "Limited online visibility and reach"
+  },
+  "directory.vision.8": {
+    "sw": "Kukosa mfumo sahihi wa mauzo (POS)",
+    "en": "Poor inventory and sales tracking"
+  },
+  "directory.vision.9": {
+    "sw": "Twende Duka inakupa duka la mtandaoni, POS, na ripoti za moja kwa moja.",
+    "en": "Twende Duka provides a digital store, POS, and real-time analytics in one place."
+  },
+  "directory.vision.10": {
+    "sw": "Kwa Wanunuzi",
+    "en": "For Customers"
+  },
+  "directory.vision.11": {
+    "sw": "Kutapeliwa na wauzaji wasioaminika",
+    "en": "Difficulty finding trusted, verified sellers"
+  },
+  "directory.vision.12": {
+    "sw": "Kutafuta bidhaa kwa tabu",
+    "en": "Fragmented and frustrating shopping experiences"
+  },
+  "directory.vision.13": {
+    "sw": "Twende Duka inakuunganisha na wauzaji waliohakikiwa, ukiweza kutafuta na kuagiza kwa usalama.",
+    "en": "Twende Duka offers a unified platform to discover, verify, and buy from trusted merchants securely."
+  },
+  "directory.vision.14": {
+    "sw": "Mfumo Wetu wa Kiikolojia",
+    "en": "The Twende Duka Ecosystem"
+  },
+  "directory.vision.15": {
+    "sw": "Wanunuzi",
+    "en": "Customers"
+  },
+  "directory.vision.16": {
+    "sw": "Wanagundua na kununua bidhaa",
+    "en": "Discover & purchase products"
+  },
+  "directory.vision.17": {
+    "sw": "Daraja la Uaminifu na Teknolojia",
+    "en": "The bridge of Trust & Technology"
+  },
+  "directory.vision.18": {
+    "sw": "Wafanyabiashara",
+    "en": "Businesses"
+  },
+  "directory.vision.19": {
+    "sw": "Wanauza na kukuza mtaji",
+    "en": "Sell & scale operations"
+  },
+  "directory.vision.20": {
+    "sw": "Zana za Kukuza Biashara Yako",
+    "en": "Business Growth Features"
+  },
+  "directory.vision.21": {
+    "sw": "Kila unachohitaji kuendesha biashara ya kisasa.",
+    "en": "Everything you need to manage and scale a modern business."
+  },
+  "directory.vision.22": {
+    "sw": "Uzoefu Bora kwa Mteja",
+    "en": "A Seamless Customer Experience"
+  },
+  "directory.vision.23": {
+    "sw": "Biashara Tunazohudumia",
+    "en": "Supported Business Models"
+  },
+  "directory.vision.24": {
+    "sw": "Mfumo unajibadilisha kulingana na aina ya biashara yako.",
+    "en": "Our platform adapts seamlessly to your specific business model and operational needs."
+  },
+  "directory.vision.25": {
+    "sw": "Jinsi Inavyofanya Kazi",
+    "en": "How It Works"
+  },
+  "directory.vision.26": {
+    "sw": "Wafanyabiashara",
+    "en": "For Merchants"
+  },
+  "directory.vision.27": {
+    "sw": "Wanunuzi",
+    "en": "For Customers"
+  },
+  "directory.vision.28": {
+    "sw": "Kwanini Uchague Twende Duka?",
+    "en": "Why Choose Twende Duka?"
+  },
+  "directory.vision.29": {
+    "sw": "Uko Tayari Kuanza?",
+    "en": "Ready to Get Started?"
+  },
+  "directory.vision.30": {
+    "sw": "Fungua Akaunti Sasa",
+    "en": "Create Your Shop"
+  },
+  "directory.vision.31": {
+    "sw": "Gundua Bidhaa",
+    "en": "Explore Products"
+  },
+  "directory.vision.32": {
+    "sw": "Soko Letu",
+    "en": "Our Market"
+  },
+  "directory.vision.33": {
+    "sw": "Jamii za Bidhaa",
+    "en": "Categories"
+  },
+  "directory.vision.34": {
+    "sw": "Safi Kote",
+    "en": "Clear"
+  },
+  "directory.vision.35": {
+    "sw": "Zote",
+    "en": "All"
+  },
+  "directory.vision.36": {
+    "sw": "Ofa Maalum",
+    "en": "Special Offer"
+  },
+  "directory.vision.37": {
+    "sw": "Punguzo la 20% kwa Maduka Mapya!",
+    "en": "20% Off from New Shops!"
+  },
+  "directory.vision.38": {
+    "sw": "Gundua bidhaa mpya leo.",
+    "en": "Discover new arrivals today."
+  },
+  "directory.vision.39": {
+    "sw": "Angalia Ofa",
+    "en": "View Promos"
+  },
+  "directory.vision.40": {
+    "sw": "Maduka Maarufu",
+    "en": "Featured Shops"
+  },
+  "directory.vision.41": {
+    "sw": "bidhaa",
+    "en": "prods"
+  },
+  "directory.vision.42": {
+    "sw": "Zinazovuma",
+    "en": "Trending Products"
+  },
+  "directory.vision.43": {
+    "sw": "Bidhaa Mpya",
+    "en": "New Arrivals"
+  },
+  "directory.vision.44": {
+    "sw": "Tazama bidhaa zilizoongezwa hivi karibuni",
+    "en": "Check out recently added products"
+  },
+  "directory.vision.45": {
+    "sw": "Tunapendekeza Kwako",
+    "en": "Recommended For You"
+  },
+  "directory.vision.46": {
+    "sw": "Bidhaa tulizochagua kwa ajili yako",
+    "en": "Products curated just for you"
+  },
+  "directory.vision.47": {
+    "sw": "Maduka Karibu Yako",
+    "en": "Nearby Shops"
+  },
+  "directory.vision.48": {
+    "sw": "Sokoni",
+    "en": "Market"
+  },
+  "directory.vision.49": {
+    "sw": "Chuja",
+    "en": "Filter"
+  },
+  "directory.vision.50": {
+    "sw": "Ingia",
+    "en": "Login"
+  },
+  "directory.vision.51": {
+    "sw": "Duka Lako",
+    "en": "Sell"
+  },
+  "directory.vision.52": {
+    "sw": "Chuja Bidhaa",
+    "en": "Filters"
+  },
+  "directory.vision.53": {
+    "sw": "Onyesha Bidhaa za Karibu",
+    "en": "Show Nearby Products"
+  },
+  "directory.vision.54": {
+    "sw": "Safi Kote",
+    "en": "Reset"
+  },
+  "directory.vision.55": {
+    "sw": "Thibitisha",
+    "en": "Apply"
+  }
+}

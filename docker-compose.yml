@@ -1,0 +1,20 @@
+# Local smoke-test stack for the frontend image — NOT the production setup.
+# Serves the built app at http://127.0.0.1:8811 with the runtime config.js
+# regenerated from .env (copy .env.example if you don't have one).
+name: duka-frontend
+
+services:
+  app:
+    build: .
+    image: duka_frontend:local
+    env_file:
+      - path: .env
+        required: false
+    # Runtime config only: the entrypoint rewrites /config.js from these vars,
+    # so editing .env + `docker compose up -d` is enough — no rebuild.
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://127.0.0.1:8009}
+      VITE_APP_URL: ${VITE_APP_URL:-http://127.0.0.1:8811}
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-8811}:80"
+    restart: unless-stopped

@@ -1,0 +1,76 @@
+name: duka_frontend CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.app.json
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push image
+        env:
+          IMAGE: ${{ secrets.DOCKER_USERNAME }}/duka_frontend:latest
+        run: |
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Roll out on server
+        uses: appleboy/ssh-action@v1
+        env:
+          IMAGE: ${{ secrets.DOCKER_USERNAME }}/duka_frontend:latest
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          envs: IMAGE
+          script_stop: true
+          script: |
+            cd ~/duka_frontend || { echo '~/duka_frontend is not checked out yet - run the one-time setup in the README'; exit 0; }
+            git pull --ff-only
+            export FRONTEND_IMAGE="$IMAGE"
+            docker compose -f docker-compose.prod.yml pull app
+            docker compose -f docker-compose.prod.yml up -d
+            sleep 3
+            # No host port is published in prod (Traefik only), so verify from inside the container.
+            docker exec duka_frontend_app wget -qO- http://127.0.0.1/config.js
+            docker compose -f docker-compose.prod.yml ps
+            docker image prune -f
