@@ -241,6 +241,22 @@ const translations = {
   "directory.vision.54": { sw: "Safi Kote", en: "Reset" },
   "directory.vision.55": { sw: "Thibitisha", en: "Apply" },
 
+  // ─── Directory landing: Vipengele (features) section ───
+  "directory.features.title": { sw: "Vipengele vya Twende Duka", en: "Twende Duka Features" },
+  "directory.features.subtitle": { sw: "Kila kitu unachohitaji kusimamia duka lako — mfumo mmoja wa kisasa, urahisi kamili.", en: "Everything you need to run your shop — one smart system, zero hassle." },
+  "directory.features.salesTitle": { sw: "Rekodi Mauzo (POS)", en: "Record Sales (POS)" },
+  "directory.features.salesDesc": { sw: "Uza kwa haraka na rekodi kila mauzo ya kila siku kwenye mfumo mmoja.", en: "Sell fast and record every daily sale in one system." },
+  "directory.features.inventoryTitle": { sw: "Simamia Bidhaa na Stock", en: "Manage Products & Stock" },
+  "directory.features.inventoryDesc": { sw: "Fuatilia bidhaa zako, idadi iliyobaki na thamani ya stoo papo hapo.", en: "Track products, stock levels, and inventory value in real time." },
+  "directory.features.expensesTitle": { sw: "Fuatilia Matumizi na Faida", en: "Track Expenses & Profit" },
+  "directory.features.expensesDesc": { sw: "Jua mapato na matumizi yako ili kuongeza faida ya biashara yako.", en: "Know your income and expenses to grow your business profit." },
+  "directory.features.onlineTitle": { sw: "Duka la Mtandaoni", en: "Online Shop & Marketplace" },
+  "directory.features.onlineDesc": { sw: "Tangaza duka lako na uza kwa wateja mtandaoni kupitia soko la Twende Duka.", en: "List your shop and sell to online customers on the Twende Duka marketplace." },
+  "directory.features.customersTitle": { sw: "Wateja na Madeni", en: "Customers & Debts" },
+  "directory.features.customersDesc": { sw: "Rekodi wateja wako na fuatilia madeni yaliyobaki kwa urahisi.", en: "Keep customer records and track outstanding debts with ease." },
+  "directory.features.reportsTitle": { sw: "Ripoti za Biashara", en: "Business Reports" },
+  "directory.features.reportsDesc": { sw: "Pata ripoti za mauzo, stoo na AI insights za kuendesha biashara kwa akili.", en: "Get sales and stock reports plus AI insights to run your shop smarter." },
+
   "footer.tagline": { sw: "Soko la kisasa Tanzania. Unganisha biashara yako na mamilioni ya wateja wanaotafuta ubora kila siku.", en: "Modern marketplace in Tanzania. Connect your business with millions of customers seeking quality daily." },
   "footer.marketplace": { sw: "Sokoni (Marketplace)", en: "Marketplace" },
   "footer.vision": { sw: "Dira Yetu (Vision)", en: "Our Vision" },

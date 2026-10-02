@@ -427,7 +427,7 @@ export default function ShopDirectory() {
 
       return (
     <div className="min-h-screen text-foreground selection:bg-primary/30 relative bg-background">
-      <SEO title="Twende Duka — Elite Global Marketplace" description="Discover the best products from verified shops across Tanzania in our elite marketplace." canonical="/" />
+      <SEO title="Twende Duka — Elite Global Marketplace" description="Twende Duka: Rekodi mauzo • Simamia bidhaa • Fuatilia matumizi • Duka mtandaoni • Ripoti za biashara. Mfumo mmoja wa kisasa kwa duka lako Tanzania." canonical="/" />
 
       <PublicNavbar />
 
@@ -746,6 +746,37 @@ export default function ShopDirectory() {
                 <TrustSystem />
               </div> */}
 
+
+      {/* 9. Vipengele — core platform features */}
+      <section className="py-10 sm:py-14 md:py-16 border-t border-border/40 bg-muted/10">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
+            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+            {t("directory.features.title")}
+          </h2>
+          <p className="text-sm sm:text-base text-muted-foreground font-medium mt-2 max-w-2xl">
+            {t("directory.features.subtitle")}
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 mt-6 sm:mt-10">
+            {[
+              { icon: Zap, title: t("directory.features.salesTitle"), desc: t("directory.features.salesDesc") },
+              { icon: Package, title: t("directory.features.inventoryTitle"), desc: t("directory.features.inventoryDesc") },
+              { icon: TrendingUp, title: t("directory.features.expensesTitle"), desc: t("directory.features.expensesDesc") },
+              { icon: Globe, title: t("directory.features.onlineTitle"), desc: t("directory.features.onlineDesc") },
+              { icon: Users, title: t("directory.features.customersTitle"), desc: t("directory.features.customersDesc") },
+              { icon: BarChart3, title: t("directory.features.reportsTitle"), desc: t("directory.features.reportsDesc") },
+            ].map((f) => (
+              <div key={f.title} className="bg-card rounded-2xl sm:rounded-[2rem] border border-border/40 p-4 sm:p-7 shadow-sm hover:shadow-lg hover:border-primary/30 transition-all">
+                <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                  <f.icon className="h-4 w-4 sm:h-6 sm:w-6" />
+                </div>
+                <h3 className="text-xs sm:text-lg font-bold mt-3 sm:mt-5 tracking-tight">{f.title}</h3>
+                <p className="text-[10px] sm:text-sm text-muted-foreground font-medium mt-1.5 sm:mt-2 leading-snug sm:leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       </main>
 
