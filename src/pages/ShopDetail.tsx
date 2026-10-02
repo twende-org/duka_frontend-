@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom";
 import {
   Search, Store, MapPin, Phone, Package, Navigation, Plus,
@@ -37,8 +37,10 @@ import {
   stockMapFromProducts,
   getShopBySlugOrId,
   getProductsByShop,
+  getShopProductsPage,
   adjustFollowerCount,
 } from "@/lib/api/domains/storefront";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { createB2BPurchaseOrder } from "@/lib/api/domains/b2b";
 import { getCorporateDepartments, createPurchaseOrder } from "@/lib/api/domains/corporate";
 import { searchProducts } from "@/lib/services/discoveryService";
@@ -50,6 +52,27 @@ import { PublicFooter } from "@/components/layout/PublicFooter";
 interface CartItem {
   product: Product;
   quantity: number;
+}
+
+/**
+ * The store page loads one capped catalog page instead of the whole catalog
+ * (the old read fetched every product of the shop). Server search and the
+ * load-more button page through the rest on demand.
+ */
+const SHOP_PRODUCTS_PAGE_SIZE = 48;
+
+/** One shop-scoped server search: the query it answers and its ranked rows. */
+interface ShopServerSearchState {
+  shopId: string;
+  query: string;
+  products: Product[];
+  hasMore: boolean;
+  nextPage: number;
+}
+
+/** The row-visibility gate the grid has always applied after loading. */
+function isVisibleProduct(p: Product): boolean {
+  return p.status === "active" && (p.stock ?? 0) > 0 && p.name?.trim() !== "" && (p.sellingPrice || 0) > 0;
 }
 
 function hexToHsl(hex: string): string | undefined {
@@ -258,6 +281,19 @@ export default function ShopDetail() {
 
   const [visibleCount, setVisibleCount] = useState(12);
 
+  // Catalog paging: the shop's products arrive one 48-row page at a time.
+  const [hasMoreShopProducts, setHasMoreShopProducts] = useState(false);
+  const [nextShopProductsPage, setNextShopProductsPage] = useState(2);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+
+  // Debounced server search over the full catalog (finds SKUs/barcodes past
+  // the loaded page). `shopSearchSeq` invalidates in-flight responses.
+  const [shopSearch, setShopSearch] = useState<ShopServerSearchState | null>(null);
+  const [shopSearchStatus, setShopSearchStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const shopSearchSeq = useRef(0);
+  const deepLinkRef = useRef("");
+
   useEffect(() => {
     if (identifier) {
       localStorage.setItem(`twende-cart-${identifier}`, JSON.stringify(cart));
@@ -298,8 +334,10 @@ export default function ShopDetail() {
             sessionStorage.setItem(`store_view_${found.id}`, "true");
           }
 
-          const prods = await getProductsByShop(found.id);
-          setProducts(prods);
+          const page = await getShopProductsPage(found.id, { pageSize: SHOP_PRODUCTS_PAGE_SIZE });
+          setProducts(page.products);
+          setHasMoreShopProducts(page.hasMore);
+          setNextShopProductsPage(2);
         } else {
           setShop(null);
         }
@@ -311,6 +349,67 @@ export default function ShopDetail() {
     }
     load();
   }, [identifier, navigate, searchParams]);
+
+  const effectiveSearchQuery = searchQuery.trim();
+  const debouncedShopQuery = useDebouncedValue(effectiveSearchQuery, 350);
+
+  // Server search runs once typing settles; shorter queries stay local so no
+  // request is wasted while the user is mid-word.
+  useEffect(() => {
+    const q = debouncedShopQuery;
+    if (!shop?.id || q.length < 2) {
+      shopSearchSeq.current += 1;
+      setShopSearch(null);
+      setShopSearchStatus("idle");
+      return;
+    }
+    const shopId = shop.id;
+    const seq = shopSearchSeq.current + 1;
+    shopSearchSeq.current = seq;
+    setShopSearchStatus("loading");
+    getShopProductsPage(shopId, { q, pageSize: SHOP_PRODUCTS_PAGE_SIZE })
+      .then((page) => {
+        if (shopSearchSeq.current !== seq) return;
+        setShopSearch({ shopId, query: q, products: page.products, hasMore: page.hasMore, nextPage: 2 });
+        setShopSearchStatus("ready");
+      })
+      .catch((err) => {
+        if (shopSearchSeq.current !== seq) return;
+        // Degrade to the local filter — the loaded page still ranks client-side.
+        console.error("Shop search failed:", err);
+        setShopSearch(null);
+        setShopSearchStatus("error");
+      });
+  }, [shop?.id, debouncedShopQuery]);
+
+  // Deep links (productId param, /product/:slug, AI widget nav) may point past
+  // the capped first page; walk the whole catalog once per target so the hero
+  // and SEO block still resolve. A target that fails the visibility gate or no
+  // longer exists stays hidden, exactly like before.
+  useEffect(() => {
+    if (!shop?.id || !highlightedProductId || products.length === 0) return;
+    const key = `${shop.id}:${highlightedProductId}`;
+    if (deepLinkRef.current === key) return;
+    deepLinkRef.current = key;
+    const found = products.some(
+      (p) => p.id === highlightedProductId || createSlug(p.name) === highlightedProductId
+    );
+    if (found) return;
+    const shopId = shop.id;
+    let cancelled = false;
+    getProductsByShop(shopId)
+      .then((all) => {
+        if (cancelled) return;
+        setProducts(all);
+        setHasMoreShopProducts(false);
+      })
+      .catch((err) => {
+        console.error("Failed to resolve highlighted product:", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [shop?.id, highlightedProductId, products]);
 
   const categories = useMemo(
     () => [...new Set(products.flatMap((p) => normalizeCategories(p)).filter(Boolean))].sort(),
@@ -327,11 +426,7 @@ export default function ShopDetail() {
   // Stock rides on each product row now; the map is only for the share dialogs.
   const stockMap = useMemo(() => stockMapFromProducts(products), [products]);
 
-  const productsWithStock = useMemo(() => {
-    return products.filter(
-      (p) => p.status === "active" && (p.stock ?? 0) > 0 && p.name?.trim() !== "" && (p.sellingPrice || 0) > 0
-    );
-  }, [products]);
+  const productsWithStock = useMemo(() => products.filter(isVisibleProduct), [products]);
 
   const featuredProducts = useMemo(() => {
     let result = [...productsWithStock];
@@ -351,14 +446,29 @@ export default function ShopDetail() {
       .slice(0, 4);
   }, [productsWithStock]);
 
-  const filtered = useMemo(() => {
-    let result = productsWithStock;
+  // Server results supersede the local filter once they answer the live query;
+  // until then (debounce window, <2 chars, failure) the loaded page ranks locally.
+  const serverSearchActive =
+    shopSearch !== null &&
+    shopSearch.shopId === shop?.id &&
+    shopSearch.query === effectiveSearchQuery &&
+    effectiveSearchQuery.length >= 2;
 
-    if (searchQuery.trim() && shop) {
-      result = searchProducts(
-        result.map((product) => ({ product, shop, stockQty: product.stock ?? 0 })),
-        searchQuery
-      ).map(({ product }) => product as typeof result[number]);
+  const filtered = useMemo(() => {
+    let result: Product[];
+
+    if (serverSearchActive && shopSearch) {
+      // Server-ranked rows: keep their order, re-apply the same visibility gate
+      // (the endpoint returns the whole catalog row, status and stock included).
+      result = shopSearch.products.filter(isVisibleProduct);
+    } else {
+      result = productsWithStock;
+      if (effectiveSearchQuery && shop) {
+        result = searchProducts(
+          result.map((product) => ({ product, shop, stockQty: product.stock ?? 0 })),
+          effectiveSearchQuery
+        ).map(({ product }) => product as typeof result[number]);
+      }
     }
 
     if (selectedCategory) {
@@ -366,7 +476,7 @@ export default function ShopDetail() {
     }
 
     return result;
-  }, [productsWithStock, searchQuery, selectedCategory, shop]);
+  }, [productsWithStock, serverSearchActive, shopSearch, effectiveSearchQuery, selectedCategory, shop]);
 
   const sortedProducts = useMemo(() => {
     if (sortBy === "relevance") return filtered;
@@ -387,6 +497,77 @@ export default function ShopDetail() {
     ].filter(Boolean) as string[];
     return [...new Set(imgs)].slice(0, 16);
   }, [shop, productsWithStock]);
+
+  /** Fetch the next catalog page; returns true when new rows were appended. */
+  const loadMoreShopProducts = async (): Promise<boolean> => {
+    if (!shop?.id || loadingMoreRef.current || !hasMoreShopProducts) return false;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const page = await getShopProductsPage(shop.id, {
+        page: nextShopProductsPage,
+        pageSize: SHOP_PRODUCTS_PAGE_SIZE,
+      });
+      setProducts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...page.products.filter((p) => !seen.has(p.id))];
+      });
+      setHasMoreShopProducts(page.hasMore);
+      setNextShopProductsPage((prev) => prev + 1);
+      return page.products.length > 0;
+    } catch (err) {
+      console.error("Failed to load more products:", err);
+      toast.error("Failed to load more products.");
+      return false;
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  };
+
+  /** Fetch the next page of the active server search; seq-guarded against re-queries. */
+  const loadMoreShopSearch = async (): Promise<boolean> => {
+    const active = shopSearch;
+    if (!shop?.id || !active || !active.hasMore || loadingMoreRef.current) return false;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    const seq = shopSearchSeq.current;
+    try {
+      const page = await getShopProductsPage(shop.id, {
+        q: active.query,
+        page: active.nextPage,
+        pageSize: SHOP_PRODUCTS_PAGE_SIZE,
+      });
+      if (shopSearchSeq.current !== seq) return false;
+      const seen = new Set(active.products.map((p) => p.id));
+      const extra = page.products.filter((p) => !seen.has(p.id));
+      setShopSearch((prev) =>
+        prev && prev.query === active.query && prev.nextPage === active.nextPage
+          ? { ...prev, products: [...prev.products, ...extra], hasMore: page.hasMore, nextPage: prev.nextPage + 1 }
+          : prev
+      );
+      return extra.length > 0;
+    } catch (err) {
+      console.error("Failed to load more search results:", err);
+      return false;
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  };
+
+  const loadMoreAvailable =
+    visibleCount < sortedProducts.length ||
+    (serverSearchActive ? !!shopSearch?.hasMore : hasMoreShopProducts);
+
+  const handleLoadMore = async () => {
+    if (visibleCount < sortedProducts.length) {
+      setVisibleCount((prev) => prev + 12);
+      return;
+    }
+    const appended = serverSearchActive ? await loadMoreShopSearch() : await loadMoreShopProducts();
+    if (appended) setVisibleCount((prev) => prev + 12);
+  };
 
   const openWhatsApp = (product?: Product | string) => {
     if (!shop?.phone && !shop?.whatsappNumber) return;
@@ -958,13 +1139,21 @@ export default function ShopDetail() {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">Products</h2>
-                      <p className="text-xs text-muted-foreground">{sortedProducts.length} items available</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground">{sortedProducts.length} items available</p>
+                        {shopSearchStatus === "loading" && effectiveSearchQuery.length >= 2 && (
+                          <span role="status" className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            {t("directory.searchingProducts")}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                       <div className="relative w-full sm:w-60">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                          placeholder="Search this shop..."
+                          placeholder={t("store.searchPlaceholder")}
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="h-11 rounded-xl pl-9 sm:h-10"
@@ -1016,9 +1205,15 @@ export default function ShopDetail() {
                           />
                         ))}
                       </div>
-                      {visibleCount < sortedProducts.length && (
+                      {loadMoreAvailable && (
                         <div className="flex justify-center pt-4">
-                          <Button onClick={() => setVisibleCount((prev) => prev + 12)} variant="outline" className="h-11 rounded-xl px-8 font-semibold">
+                          <Button
+                            onClick={handleLoadMore}
+                            disabled={loadingMore}
+                            variant="outline"
+                            className="h-11 rounded-xl px-8 font-semibold"
+                          >
+                            {loadingMore && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Load More Products
                           </Button>
                         </div>

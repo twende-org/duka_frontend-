@@ -4,11 +4,16 @@ import {
   fromApiPublicProduct,
   fromApiShop,
   fromApiStorefrontOrder,
+  getAllPublicProducts,
   getAllShops,
   getProductsByShop,
+  getPublicTrendingSearches,
   getShopBySlugOrId,
+  getShopProductsPage,
   getWholesaleSuppliers,
   placeWishlistOrder,
+  searchPublicProducts,
+  searchPublicShops,
 } from "@/lib/api/domains/storefront";
 import { ApiError } from "@/lib/api/errors";
 
@@ -135,6 +140,169 @@ describe("getWholesaleSuppliers", () => {
   });
 });
 
+describe("getAllShops with isPublic filter", () => {
+  it("forwards the is_public param when requested", async () => {
+    clientMock.get.mockResolvedValueOnce({ next: null, results: [] });
+
+    await getAllShops({ isPublic: true });
+
+    expect(clientMock.get).toHaveBeenCalledWith("/api/v1/public/shops/", {
+      query: { page_size: 200, is_public: "true" },
+      auth: false,
+    });
+  });
+});
+
+describe("searchPublicShops", () => {
+  it("searches shops with a single anonymous page", async () => {
+    clientMock.get.mockResolvedValueOnce({
+      next: "http://testserver/api/v1/public/shops/?search=soda&page=2",
+      results: [{ id: "uuid-1", legacyId: "shop-1", name: "Soda World", isPublic: true }],
+    });
+
+    const shops = await searchPublicShops({ q: "soda", isPublic: true });
+
+    expect(clientMock.get).toHaveBeenCalledTimes(1);
+    expect(clientMock.get).toHaveBeenCalledWith("/api/v1/public/shops/", {
+      query: { search: "soda", page_size: 10, is_public: "true" },
+      auth: false,
+    });
+    expect(shops.map((s) => s.id)).toEqual(["shop-1"]);
+  });
+
+  it("scopes to wholesale suppliers with a custom page size", async () => {
+    clientMock.get.mockResolvedValueOnce({ next: null, results: [] });
+
+    await searchPublicShops({ q: "rice", isWholesaleSupplier: true, pageSize: 6 });
+
+    expect(clientMock.get).toHaveBeenCalledWith("/api/v1/public/shops/", {
+      query: { search: "rice", page_size: 6, is_wholesale_supplier: "true" },
+      auth: false,
+    });
+  });
+});
+
+describe("searchPublicProducts", () => {
+  it("reads one ranked page from the public search endpoint", async () => {
+    clientMock.get.mockResolvedValueOnce({
+      count: 40,
+      next: "http://testserver/api/v1/public/products/search/?q=soda&page=2",
+      results: [
+        {
+          id: "uuid-prod",
+          legacyId: "prod-1",
+          name: "Soda Crate",
+          shopId: "shop-1",
+          sellingPrice: "12000.00",
+          stock: 5,
+          minStock: 2,
+          buyingPrice: "9000.00",
+          supplier: "Crate Supplier",
+        },
+      ],
+    });
+
+    const page = await searchPublicProducts({ q: "soda" });
+
+    expect(clientMock.get).toHaveBeenCalledWith("/api/v1/public/products/search/", {
+      query: { q: "soda", page_size: 200 },
+      auth: false,
+    });
+    expect(page.count).toBe(40);
+    expect(page.hasMore).toBe(true);
+    expect(page.products[0].id).toBe("prod-1");
+    expect(page.products[0].stock).toBe(5);
+    expect(page.products[0].buyingPrice).toBeUndefined();
+    expect(page.products[0].supplier).toBeUndefined();
+  });
+
+  it("omits page 1 and forwards shop scoping plus later pages", async () => {
+    clientMock.get.mockResolvedValueOnce({ count: 0, next: null, results: [] });
+
+    const page = await searchPublicProducts({ q: "unga", shop: "mama shop/1", page: 2 });
+
+    expect(clientMock.get).toHaveBeenCalledWith("/api/v1/public/products/search/", {
+      query: { q: "unga", page_size: 200, shop: "mama shop/1", page: 2 },
+      auth: false,
+    });
+    expect(page.hasMore).toBe(false);
+    expect(page.products).toEqual([]);
+    expect(page.count).toBe(0);
+  });
+});
+
+describe("getAllPublicProducts", () => {
+  it("walks the cross-shop product stream anonymously, newest first", async () => {
+    clientMock.get
+      .mockResolvedValueOnce({
+        next: "http://testserver/api/v1/public/products/search/?page=2&page_size=200",
+        results: [
+          {
+            id: "uuid-prod",
+            legacyId: "prod-1",
+            name: "Soda Crate",
+            shopId: "shop-1",
+            sellingPrice: "12000.00",
+            buyingPrice: "9000.00",
+            supplier: "Crate Supplier",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        next: null,
+        results: [{ id: "prod-2", name: "Rice", shopId: "shop-2", sellingPrice: "2000.00" }],
+      });
+
+    const products = await getAllPublicProducts();
+
+    expect(products.map((p) => p.id)).toEqual(["prod-1", "prod-2"]);
+    expect(products[0].buyingPrice).toBeUndefined();
+    expect(products[0].supplier).toBeUndefined();
+    expect(clientMock.get).toHaveBeenNthCalledWith(1, "/api/v1/public/products/search/", {
+      query: { page_size: 200 },
+      auth: false,
+    });
+    expect(clientMock.get).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/public/products/search/?page=2&page_size=200",
+      { query: undefined, auth: false }
+    );
+  });
+});
+
+describe("getPublicTrendingSearches", () => {
+  it("maps the trending payload and drops empty queries", async () => {
+    clientMock.get.mockResolvedValueOnce({
+      trending: [
+        { query: "Laptop", count: 12 },
+        { query: "", count: 3 },
+        { query: "Rice", count: "7" },
+      ],
+    });
+
+    const rows = await getPublicTrendingSearches();
+
+    expect(clientMock.get).toHaveBeenCalledWith("/api/v1/public/trending-searches/", {
+      query: undefined,
+      auth: false,
+    });
+    expect(rows).toEqual([
+      { query: "Laptop", count: 12 },
+      { query: "Rice", count: 7 },
+    ]);
+  });
+
+  it("forwards the days window and tolerates a bare payload", async () => {
+    clientMock.get.mockResolvedValueOnce({});
+
+    await expect(getPublicTrendingSearches(7)).resolves.toEqual([]);
+    expect(clientMock.get).toHaveBeenCalledWith("/api/v1/public/trending-searches/", {
+      query: { days: 7 },
+      auth: false,
+    });
+  });
+});
+
 describe("getShopBySlugOrId", () => {
   it("encodes the identifier and reads anonymously", async () => {
     clientMock.get.mockResolvedValueOnce({ id: "s1", name: "Mama Shop", legacyId: "shop-1" });
@@ -188,6 +356,75 @@ describe("getProductsByShop", () => {
     expect(products[0].id).toBe("prod-1");
     expect(products[0].buyingPrice).toBeUndefined();
     expect(products[0].supplier).toBeUndefined();
+  });
+});
+
+describe("getShopProductsPage", () => {
+  it("reads one catalog page anonymously with the merchant fields blanked", async () => {
+    clientMock.get.mockResolvedValueOnce({
+      count: 57,
+      next: "http://localhost:8009/api/v1/public/shops/shop-1/products/?page=2&page_size=48",
+      results: [
+        {
+          id: "uuid-prod",
+          legacyId: "prod-9",
+          name: "Soda Crate",
+          shopId: "shop-1",
+          sellingPrice: "12000.00",
+          buyingPrice: "9000.00",
+          supplier: "Supplier",
+          supplierShopId: "sup-1",
+          stock: "3",
+        },
+      ],
+    });
+
+    const page = await getShopProductsPage("shop-1");
+
+    expect(clientMock.get).toHaveBeenCalledWith("/api/v1/public/shops/shop-1/products/", {
+      query: { page_size: 200 },
+      auth: false,
+    });
+    expect(page.count).toBe(57);
+    expect(page.hasMore).toBe(true);
+    expect(page.products[0].id).toBe("prod-9");
+    expect(page.products[0].buyingPrice).toBeUndefined();
+    expect(page.products[0].supplier).toBeUndefined();
+    expect(page.products[0].supplierShopId).toBeUndefined();
+    expect(page.products[0].stock).toBe(3);
+  });
+
+  it("forwards the trimmed query, later pages and the page size", async () => {
+    clientMock.get.mockResolvedValueOnce({ count: 2, next: null, results: [] });
+
+    const page = await getShopProductsPage("mama shop/1", {
+      q: "  barcode 123 ",
+      page: 3,
+      pageSize: 48,
+    });
+
+    expect(clientMock.get).toHaveBeenCalledWith("/api/v1/public/shops/mama%20shop%2F1/products/", {
+      query: { page_size: 48, search: "barcode 123", page: 3 },
+      auth: false,
+    });
+    expect(page.count).toBe(2);
+    expect(page.hasMore).toBe(false);
+  });
+
+  it("omits the search param and page 1, falling back to the row count", async () => {
+    clientMock.get.mockResolvedValueOnce({
+      results: [{ id: "prod-2", name: "Rice", sellingPrice: "2000.00" }],
+    });
+
+    const page = await getShopProductsPage("shop-1", { q: "   ", page: 1 });
+
+    expect(clientMock.get).toHaveBeenCalledWith("/api/v1/public/shops/shop-1/products/", {
+      query: { page_size: 200 },
+      auth: false,
+    });
+    expect(page.count).toBe(1);
+    expect(page.hasMore).toBe(false);
+    expect(page.products[0].id).toBe("prod-2");
   });
 });
 

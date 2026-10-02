@@ -1,4 +1,9 @@
-import Fuse from "fuse.js";
+import type { Shop } from "@/types";
+import {
+  getPublicTrendingSearches,
+  searchPublicProducts,
+  searchPublicShops,
+} from "@/lib/api/domains/storefront";
 
 export const SEARCH_HISTORY_KEY = "twende_search_history";
 export const RECENTLY_VIEWED_KEY = "twende_recently_viewed";
@@ -15,19 +20,6 @@ export interface SearchSuggestion {
 export interface RichSearchItem {
   text: string;
   imageUrl?: string;
-}
-
-let suggestionIndex: Fuse<SearchSuggestion> | null = null;
-
-export function buildSearchIndex(suggestions: SearchSuggestion[]) {
-  suggestionIndex = new Fuse(suggestions, {
-    keys: [
-      { name: 'text', weight: 0.7 },
-      { name: 'subtitle', weight: 0.3 }
-    ],
-    threshold: 0.4,
-    ignoreLocation: true
-  });
 }
 
 export function getSearchHistory(): RichSearchItem[] {
@@ -58,38 +50,63 @@ export function clearSearchHistory() {
   localStorage.removeItem(SEARCH_HISTORY_KEY);
 }
 
-export function getTrendingSearches(): RichSearchItem[] {
-  return [
-    { text: "Samsung S24 Ultra", imageUrl: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&q=80&w=200&h=200" },
-    { text: "Running Shoes", imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=200&h=200" },
-    { text: "Laptop for University", imageUrl: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&q=80&w=200&h=200" },
-    { text: "Smart TV 55 inch", imageUrl: "https://images.unsplash.com/photo-1593784991095-a205069470b6?auto=format&fit=crop&q=80&w=200&h=200" },
-    { text: "Men's Watches", imageUrl: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&q=80&w=200&h=200" }
-  ];
+/**
+ * Real search demand (top queries of the last 30 days) as recorded by the
+ * telemetry endpoint. An empty array means nobody has searched yet — callers
+ * must render no trending section rather than invent one.
+ */
+export async function fetchTrendingSearches(): Promise<RichSearchItem[]> {
+  const rows = await getPublicTrendingSearches();
+  return rows.map((row) => ({ text: row.query }));
 }
 
-export function getInstantSuggestions(query: string): SearchSuggestion[] {
-  if (!query) return [];
-  
-  if (suggestionIndex) {
-    return suggestionIndex.search(query).map(r => r.item).slice(0, 5);
+export type SuggestionContext = "marketplace" | "wholesale";
+
+function shopToSuggestion(shop: Shop): SearchSuggestion {
+  return {
+    id: `shop-${shop.id}`,
+    type: "shop",
+    text: shop.name,
+    subtitle: shop.location || (shop.businessCategories || []).slice(0, 2).join(", ") || undefined,
+    url: `/shop/${encodeURIComponent(shop.slug || shop.id)}`,
+    imageUrl: shop.imageUrl,
+  };
+}
+
+/**
+ * Server-backed autocomplete. Marketplace suggestions mix ranked products and
+ * ranked shops; wholesale suggestions are supplier shops only. A failing
+ * source degrades to the other, and a total failure to [] — the caller keeps
+ * the "press Enter to search" fallback.
+ */
+export async function fetchInstantSuggestions(
+  query: string,
+  context: SuggestionContext = "marketplace"
+): Promise<SearchSuggestion[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+
+  if (context === "wholesale") {
+    const shops = await searchPublicShops({ q, isWholesaleSupplier: true, pageSize: 6 });
+    return shops.map(shopToSuggestion);
   }
-  
-  const q = query.toLowerCase();
-  const suggestions: SearchSuggestion[] = [];
-  
-  if ("electronics".includes(q) || "phones".includes(q)) {
-    suggestions.push({ id: `cat-${q}`, type: "category", text: "Electronics & Phones" });
-  }
-  if ("fashion".includes(q) || "shoes".includes(q)) {
-    suggestions.push({ id: `cat-fashion-${q}`, type: "category", text: "Fashion & Shoes" });
-  }
-  
-  if (q.length > 2) {
-    suggestions.push({ id: `prod-1-${q}`, type: "product", text: `${query} Pro Max`, subtitle: "In Electronics" });
-    suggestions.push({ id: `prod-2-${q}`, type: "product", text: `Premium ${query}`, subtitle: "Best seller" });
-    suggestions.push({ id: `shop-1-${q}`, type: "shop", text: `${query} Official Store`, subtitle: "Verified Shop" });
-  }
-  
-  return suggestions;
+
+  const [productResult, shopResult] = await Promise.allSettled([
+    searchPublicProducts({ q, pageSize: 6 }),
+    searchPublicShops({ q, isPublic: true, pageSize: 4 }),
+  ]);
+
+  const products = productResult.status === "fulfilled" ? productResult.value.products : [];
+  const shops = shopResult.status === "fulfilled" ? shopResult.value : [];
+
+  return [
+    ...products.map((product): SearchSuggestion => ({
+      id: `product-${product.id}`,
+      type: "product",
+      text: product.name,
+      subtitle: product.brand || product.category,
+      imageUrl: product.imageUrl,
+    })),
+    ...shops.map(shopToSuggestion),
+  ];
 }

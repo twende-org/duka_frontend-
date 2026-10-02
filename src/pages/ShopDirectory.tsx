@@ -22,6 +22,7 @@ import {
   Navigation,
   Globe,
   Package,
+  Loader2,
   Smartphone,
   Users,
   BarChart3,
@@ -47,9 +48,10 @@ import SEO from "@/components/SEO";
 import LanguageToggle from "@/components/LanguageToggle";
 import Logo from "@/components/common/Logo";
 
-import { getAllShops, getProductsByShop } from "@/lib/api/domains/storefront";
+import { getAllPublicProducts, getAllShops, searchPublicProducts } from "@/lib/api/domains/storefront";
 import type { Shop, Product, Stock } from "@/types";
 import { trackEvent } from "@/lib/analytics";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ProductWall } from "@/components/directory/ProductWall";
 import { TrustSystem } from "@/components/directory/TrustSystem";
 import { DiscoveryRail } from "@/components/directory/DiscoveryRail";
@@ -68,10 +70,29 @@ interface ShopWithProducts extends Shop {
   categories: string[];
 }
 
+interface ServerSearchState {
+  query: string;
+  products: Product[];
+  total: number;
+  hasMore: boolean;
+  nextPage: number;
+}
+
+/** Visibility gate the directory has always applied to every product row. */
+function isVisibleProduct(p: Product) {
+  const stockQty = p.stock ?? 0;
+  return p.status === "active" && (p.name ?? "").trim() !== "" && (p.sellingPrice || 0) > 0 && stockQty > 0;
+}
+
 export default function ShopDirectory() {
   const [searchParams] = useSearchParams();
   const [shops, setShops] = useState<ShopWithProducts[]>([]);
   const [loading, setLoading] = useState(true);
+  const [serverResults, setServerResults] = useState<ServerSearchState | null>(null);
+  const [serverSearchStatus, setServerSearchStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [serverSearchRetry, setServerSearchRetry] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const serverSearchSeq = useRef(0);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchParams.get("q") || "");
   type SortOption = "relevance" | "price_asc" | "price_desc" | "newest" | "nearest";
@@ -103,6 +124,65 @@ export default function ShopDirectory() {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 800);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  const effectiveSearchQuery = (aiFilter ? aiFilter.cleanQuery : searchQuery).trim();
+  const debouncedServerQuery = useDebouncedValue(effectiveSearchQuery, 350);
+
+  // Server-wide search: supersedes the locally loaded rows once a response for
+  // the current query lands, so matches in unloaded shops become reachable.
+  useEffect(() => {
+    const q = debouncedServerQuery;
+    if (q.length < 2) {
+      serverSearchSeq.current += 1;
+      setServerResults(null);
+      setServerSearchStatus("idle");
+      setLoadingMore(false);
+      return;
+    }
+    const seq = ++serverSearchSeq.current;
+    setServerSearchStatus("loading");
+    searchPublicProducts({ q, pageSize: 200 })
+      .then((page) => {
+        if (seq !== serverSearchSeq.current) return;
+        setServerResults({
+          query: q,
+          products: page.products.filter(isVisibleProduct),
+          total: page.count,
+          hasMore: page.hasMore,
+          nextPage: 2,
+        });
+        setServerSearchStatus("ready");
+      })
+      .catch(() => {
+        if (seq !== serverSearchSeq.current) return;
+        setServerResults(null);
+        setServerSearchStatus("error");
+      });
+  }, [debouncedServerQuery, serverSearchRetry]);
+
+  const loadMoreServerResults = async () => {
+    if (!serverResults || loadingMore || !serverResults.hasMore) return;
+    const seq = serverSearchSeq.current;
+    const q = serverResults.query;
+    setLoadingMore(true);
+    try {
+      const page = await searchPublicProducts({ q, page: serverResults.nextPage, pageSize: 200 });
+      if (seq !== serverSearchSeq.current) return;
+      setServerResults((prev) => {
+        if (!prev || prev.query !== q) return prev;
+        return {
+          ...prev,
+          products: [...prev.products, ...page.products.filter(isVisibleProduct)],
+          hasMore: page.hasMore,
+          nextPage: prev.nextPage + 1,
+        };
+      });
+    } catch {
+      // Keep what is on screen; the button stays available for another try.
+    } finally {
+      if (seq === serverSearchSeq.current) setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     if (debouncedSearchQuery.trim().length >= 2) {
@@ -142,28 +222,29 @@ export default function ShopDirectory() {
   useEffect(() => {
     async function load() {
       try {
-        const allShops = await getAllShops();
-        const enriched: ShopWithProducts[] = await Promise.all(
-          allShops.map(async (shop) => {
-            const products = await getProductsByShop(shop.id);
+        // One shops page set plus one cross-shop product stream, instead of a
+        // products request per shop. The stream arrives newest-first and each
+        // shop's slice keeps that browse order, matching the old per-shop reads.
+        const [allShops, allProducts] = await Promise.all([
+          getAllShops({ isPublic: true }),
+          getAllPublicProducts(),
+        ]);
 
-            // Strictly filter for active products AND must have stock > 0
-            const activeProducts = (products || [])
-              .filter((p) => {
-                const stockQty = p.stock ?? 0;
-                return (
-                  p.status === "active" && 
-                  p.name?.trim() !== "" && 
-                  (p.sellingPrice || 0) > 0 &&
-                  stockQty > 0 // Only show if stock is available
-                );
-              })
-              .map((p) => ({ ...p, _stockQty: p.stock ?? 0 }));
+        const knownShopIds = new Set(allShops.map((shop) => shop.id));
+        const productsByShop = new Map<string, Product[]>();
+        for (const product of allProducts) {
+          if (!knownShopIds.has(product.shopId) || !isVisibleProduct(product)) continue;
+          const row = { ...product, _stockQty: product.stock ?? 0 };
+          const list = productsByShop.get(product.shopId);
+          if (list) list.push(row);
+          else productsByShop.set(product.shopId, [row]);
+        }
 
-            const categories = [...new Set(activeProducts.flatMap((p) => normalizeCategories(p)).filter(Boolean))];
-            return { ...shop, products: activeProducts, productCount: activeProducts.length, categories };
-          })
-        );
+        const enriched: ShopWithProducts[] = allShops.map((shop) => {
+          const products = productsByShop.get(shop.id) ?? [];
+          const categories = [...new Set(products.flatMap((p) => normalizeCategories(p)).filter(Boolean))];
+          return { ...shop, products, productCount: products.length, categories };
+        });
         // Only show shops that are public AND have at least one active product in stock
         setShops(enriched.filter(s => s.isPublic === true && s.productCount > 0));
       } catch (err) {
@@ -211,6 +292,28 @@ export default function ShopDirectory() {
 
   const allProductPairs = useMemo(() => shops.flatMap(shop => (shop.products || []).map(product => ({ product, shop, stockQty: (product as any)._stockQty }))), [shops]);
 
+  const shopById = useMemo(() => new Map(shops.map((s) => [s.id, s])), [shops]);
+
+  /**
+   * Server results take over only when they answer the query currently in the
+   * box (live, not debounced) — during the debounce window or after an error
+   * the locally ranked rows keep rendering.
+   */
+  const serverActive = serverResults !== null && serverResults.query === effectiveSearchQuery && effectiveSearchQuery.length >= 2;
+
+  const baseProductPairs = useMemo(() => {
+    if (serverActive && serverResults) {
+      const pairs: ProductPair[] = [];
+      for (const product of serverResults.products) {
+        const shop = shopById.get(product.shopId);
+        if (!shop) continue;
+        pairs.push({ product, shop, stockQty: product.stock ?? 0 });
+      }
+      return pairs;
+    }
+    return allProductPairs as unknown as ProductPair[];
+  }, [serverActive, serverResults, shopById, allProductPairs]);
+
   const crossSellItems = useMemo(() => {
     if (!quickViewItem) return [];
     return allProductPairs
@@ -226,11 +329,19 @@ export default function ShopDirectory() {
   }, [shops, userLocation]);
 
   const filteredProductPairs = useMemo(() => {
-    let result = allProductPairs as unknown as ProductPair[];
+    let result = baseProductPairs;
     
     // Use the smart search service with the cleaned query if in AI mode
     const activeSearchQuery = aiFilter ? aiFilter.cleanQuery : searchQuery;
-    result = searchProducts(result, activeSearchQuery, selectedCategory);
+    if (serverActive) {
+      // Server rows arrive already ranked; keep that order and only re-apply
+      // the category chip (its values do not match server category semantics).
+      // Slice first: the sort switch below mutates in place, and the memoized
+      // server array must stay in its original relevance order.
+      result = searchProducts(result.slice(), "", selectedCategory);
+    } else {
+      result = searchProducts(result, activeSearchQuery, selectedCategory);
+    }
     
     if (aiFilter) {
       if (aiFilter.maxPrice) {
@@ -286,7 +397,7 @@ export default function ShopDirectory() {
     }
     
     return result;
-  }, [allProductPairs, searchQuery, selectedCategory, nearbyOnly, userLocation, aiFilter, sortBy]);
+  }, [baseProductPairs, serverActive, searchQuery, selectedCategory, nearbyOnly, userLocation, aiFilter, sortBy]);
 
   const handleIntelligentSearch = async (query: string, isAiMode: boolean) => {
     setSearchQuery(query);
@@ -473,7 +584,9 @@ export default function ShopDirectory() {
                             {t("directory.vision.searchResults")}
                           </h2>
                           <p className="text-xs sm:text-sm font-medium text-muted-foreground mt-1">
-                            {t("directory.showingProducts").replace("{count}", filteredProductPairs.length.toString())}
+                            {serverActive && serverResults && serverResults.total > filteredProductPairs.length
+                              ? t("directory.showingProductsOf").replace("{count}", filteredProductPairs.length.toString()).replace("{total}", serverResults.total.toString())
+                              : t("directory.showingProducts").replace("{count}", filteredProductPairs.length.toString())}
                           </p>
                           {/* Active Filters Display */}
                           {(searchQuery || selectedCategory || nearbyOnly) && (
@@ -543,6 +656,28 @@ export default function ShopDirectory() {
                         </div>
                       </div>
 
+                      {/* SERVER SEARCH STATUS */}
+                      {serverSearchStatus === "loading" && (
+                        <div className="flex items-center gap-2 mb-4 text-xs sm:text-sm font-semibold text-muted-foreground" role="status">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          {t("directory.searchingProducts")}
+                        </div>
+                      )}
+
+                      {serverSearchStatus === "error" && (
+                        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3" role="alert">
+                          <p className="text-sm font-semibold text-destructive">{t("directory.searchFailed")}</p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-xl font-bold shrink-0 border-destructive/30 text-destructive hover:text-destructive"
+                            onClick={() => setServerSearchRetry((n) => n + 1)}
+                          >
+                            {t("common.retry")}
+                          </Button>
+                        </div>
+                      )}
+
                       {/* SKELETON */}
                       {loading && (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
@@ -566,11 +701,32 @@ export default function ShopDirectory() {
 
                       {/* PRODUCT WALL */}
                       {!loading && filteredProductPairs.length > 0 && (
-                        <ProductWall 
-                          products={filteredProductPairs} 
-                          isMerchant={isMerchant} 
-                          onProductClick={setQuickViewItem}
-                        />
+                        <>
+                          <ProductWall 
+                            products={filteredProductPairs} 
+                            isMerchant={isMerchant} 
+                            onProductClick={setQuickViewItem}
+                          />
+                          {serverActive && serverResults?.hasMore && (
+                            <div className="flex justify-center mt-8 sm:mt-10">
+                              <Button
+                                variant="outline"
+                                className="rounded-2xl font-bold px-8 h-12 border-2"
+                                disabled={loadingMore}
+                                onClick={loadMoreServerResults}
+                              >
+                                {loadingMore ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    {t("directory.loadingMore")}
+                                  </>
+                                ) : (
+                                  t("directory.loadMore")
+                                )}
+                              </Button>
+                            </div>
+                          )}
+                        </>
                       )}
                     </>
                   )}

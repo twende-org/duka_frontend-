@@ -200,9 +200,15 @@ async function fetchAll<T>(path: string, query: Record<string, string | number>)
   return collected;
 }
 
-/** Every shop, public directory or not. */
-export async function getAllShops(): Promise<Shop[]> {
-  const rows = await fetchAll<unknown>(PUBLIC_SHOPS_PATH, { page_size: MAX_PAGE_SIZE });
+/**
+ * Every shop, public directory or not. Storefront surfaces pass
+ * `{ isPublic: true }` so the server drops unapproved shops before they
+ * travel; omitting the option keeps the historical "everything" contract.
+ */
+export async function getAllShops(options?: { isPublic?: boolean }): Promise<Shop[]> {
+  const query: Record<string, string | number> = { page_size: MAX_PAGE_SIZE };
+  if (options?.isPublic) query.is_public = "true";
+  const rows = await fetchAll<unknown>(PUBLIC_SHOPS_PATH, query);
   return rows.map(fromApiShop);
 }
 
@@ -212,6 +218,92 @@ export async function getWholesaleSuppliers(): Promise<Shop[]> {
     page_size: MAX_PAGE_SIZE,
   });
   return rows.map(fromApiShop);
+}
+
+/** Server-ranked shop matches for the search bar's suggestion dropdown. */
+export async function searchPublicShops(input: {
+  q: string;
+  isPublic?: boolean;
+  isWholesaleSupplier?: boolean;
+  pageSize?: number;
+}): Promise<Shop[]> {
+  const query: Record<string, string | number> = {
+    search: input.q,
+    page_size: input.pageSize ?? 10,
+  };
+  if (input.isPublic) query.is_public = "true";
+  if (input.isWholesaleSupplier) query.is_wholesale_supplier = "true";
+  const body = await getApiClient().get<DrfPage<unknown>>(PUBLIC_SHOPS_PATH, {
+    query,
+    auth: false,
+  });
+  return unwrapList<unknown>(body).map(fromApiShop);
+}
+
+/** One page of server-ranked public product search. */
+export interface PublicProductSearchPage {
+  products: Product[];
+  count: number;
+  hasMore: boolean;
+}
+
+/**
+ * Cross-shop product search. The server ranks by the same scorer ladder the
+ * storefront uses locally (exact > prefix > word > substring > fuzzy), so a
+ * page of results must keep the server's order — do not re-rank.
+ */
+export async function searchPublicProducts(input: {
+  q: string;
+  shop?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<PublicProductSearchPage> {
+  const query: Record<string, string | number> = {
+    q: input.q,
+    page_size: input.pageSize ?? MAX_PAGE_SIZE,
+  };
+  if (input.shop) query.shop = input.shop;
+  if (input.page && input.page > 1) query.page = input.page;
+  const body = await getApiClient().get<DrfPage<unknown>>("/api/v1/public/products/search/", {
+    query,
+    auth: false,
+  });
+  const rows = unwrapList<unknown>(body);
+  return {
+    products: rows.map(fromApiPublicProduct),
+    count: numberOr(isRecord(body) ? body.count : undefined, rows.length),
+    hasMore: Boolean(body?.next),
+  };
+}
+
+/**
+ * Every storefront product across approved shops, newest first: the search
+ * endpoint answers an empty query with browse order, so the directory walks
+ * the cross-shop stream once instead of fetching each shop's catalog.
+ */
+export async function getAllPublicProducts(): Promise<Product[]> {
+  const rows = await fetchAll<unknown>("/api/v1/public/products/search/", {
+    page_size: MAX_PAGE_SIZE,
+  });
+  return rows.map(fromApiPublicProduct);
+}
+
+export interface TrendingSearch {
+  query: string;
+  count: number;
+}
+
+/** Real search demand from telemetry; empty when nobody has searched yet. */
+export async function getPublicTrendingSearches(days?: number): Promise<TrendingSearch[]> {
+  const body = await getApiClient().get<unknown>("/api/v1/public/trending-searches/", {
+    query: days ? { days } : undefined,
+    auth: false,
+  });
+  const rows = isRecord(body) && Array.isArray(body.trending) ? body.trending : [];
+  return rows
+    .filter(isRecord)
+    .map((row) => ({ query: stringOr(row.query), count: numberOr(row.count) }))
+    .filter((row) => row.query !== "");
 }
 
 /**
@@ -240,6 +332,40 @@ export async function getProductsByShop(shopId: string): Promise<Product[]> {
     { page_size: MAX_PAGE_SIZE }
   );
   return rows.map(fromApiPublicProduct);
+}
+
+/** One page of a shop's storefront catalog, optionally ranked by a query. */
+export interface ShopProductPage {
+  products: Product[];
+  count: number;
+  hasMore: boolean;
+}
+
+/**
+ * One catalog page for a shop. With `q` the server ranks by the same ladder as
+ * the marketplace (exact SKU/barcode first), scoped to this shop's rows, so the
+ * order must be preserved. Pages are 1-based; page 1 is the default.
+ */
+export async function getShopProductsPage(
+  shopId: string,
+  options?: { q?: string; page?: number; pageSize?: number }
+): Promise<ShopProductPage> {
+  const query: Record<string, string | number> = {
+    page_size: options?.pageSize ?? MAX_PAGE_SIZE,
+  };
+  const q = options?.q?.trim();
+  if (q) query.search = q;
+  if (options?.page && options.page > 1) query.page = options.page;
+  const body = await getApiClient().get<DrfPage<unknown>>(
+    `${PUBLIC_SHOPS_PATH}${encodeURIComponent(shopId)}/products/`,
+    { query, auth: false }
+  );
+  const rows = unwrapList<unknown>(body);
+  return {
+    products: rows.map(fromApiPublicProduct),
+    count: numberOr(isRecord(body) ? body.count : undefined, rows.length),
+    hasMore: Boolean(body?.next),
+  };
 }
 
 /** One line of a wishlist checkout, exactly as the modal builds it. */

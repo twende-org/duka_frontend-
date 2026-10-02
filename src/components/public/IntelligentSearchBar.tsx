@@ -6,14 +6,15 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import {
   getSearchHistory,
-  getTrendingSearches,
-  getInstantSuggestions,
+  fetchTrendingSearches,
+  fetchInstantSuggestions,
   addSearchToHistory,
   SearchSuggestion,
   RichSearchItem
 } from "@/lib/services/searchService";
 import { motion, AnimatePresence } from "framer-motion";
 import { trackEvent } from "@/lib/analytics";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 export type SearchContext = "marketplace" | "wholesale";
 
@@ -27,23 +28,16 @@ interface IntelligentSearchBarProps {
   mobileTrigger?: boolean;
 }
 
-const CONTEXT_COPY: Record<SearchContext, { label: string; placeholder: string; aiPlaceholder: string; trending: RichSearchItem[] }> = {
+const CONTEXT_COPY: Record<SearchContext, { label: string; placeholder: string; aiPlaceholder: string }> = {
   marketplace: {
     label: "Marketplace",
     placeholder: "Search products, shops, or ask Twende AI...",
     aiPlaceholder: "Ask Twende AI (e.g. Good laptop under 500k)",
-    trending: [],
   },
   wholesale: {
     label: "Wholesale B2B",
     placeholder: "Search suppliers, categories or bulk products...",
     aiPlaceholder: "Ask Twende AI (e.g. Rice suppliers in Dar with MOQ 50)",
-    trending: [
-      { text: "Rice suppliers", imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=200&h=200" },
-      { text: "Cooking oil wholesale", imageUrl: "https://images.unsplash.com/photo-1620853503250-93a0ceeb2801?auto=format&fit=crop&q=80&w=200&h=200" },
-      { text: "Electronics distributor", imageUrl: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=200&h=200" },
-      { text: "Soft drinks bulk", imageUrl: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&q=80&w=200&h=200" }
-    ],
   },
 };
 
@@ -61,28 +55,68 @@ export function IntelligentSearchBar({
   const [history, setHistory] = useState<RichSearchItem[]>([]);
   const [trending, setTrending] = useState<RichSearchItem[]>([]);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [isSuggesting, setIsSuggesting] = useState(false);
 
   const overlayRef = useRef<HTMLDivElement>(null);
   const overlayInputRef = useRef<HTMLInputElement>(null);
+  const liveQueryRef = useRef(query);
+  const suggestionSeqRef = useRef(0);
 
   const copy = CONTEXT_COPY[context] ?? CONTEXT_COPY.marketplace;
 
   useEffect(() => {
     setHistory(getSearchHistory());
-    setTrending(copy.trending.length ? copy.trending : getTrendingSearches());
   }, [context]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchTrendingSearches()
+      .then((items) => {
+        if (!cancelled) setTrending(items);
+      })
+      .catch(() => {
+        if (!cancelled) setTrending([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setQuery(initialQuery);
   }, [initialQuery]);
 
   useEffect(() => {
-    if (query.length > 2 && isFocused && !isAiMode) {
-      setSuggestions(getInstantSuggestions(query));
-    } else {
+    liveQueryRef.current = query;
+  }, [query]);
+
+  const debouncedQuery = useDebouncedValue(query, 300);
+
+  useEffect(() => {
+    const trimmed = debouncedQuery.trim();
+    if (trimmed.length < 2 || !isFocused || isAiMode) {
+      // Bump the sequence so any in-flight response is discarded, and drop
+      // suggestions the moment the input no longer justifies them.
+      suggestionSeqRef.current += 1;
       setSuggestions([]);
+      setIsSuggesting(false);
+      return;
     }
-  }, [query, isFocused, isAiMode]);
+    const seq = ++suggestionSeqRef.current;
+    const firedFor = trimmed;
+    setIsSuggesting(true);
+    fetchInstantSuggestions(firedFor, context)
+      .then((items) => {
+        if (seq !== suggestionSeqRef.current || liveQueryRef.current.trim() !== firedFor) return;
+        setSuggestions(items);
+        setIsSuggesting(false);
+      })
+      .catch(() => {
+        if (seq !== suggestionSeqRef.current || liveQueryRef.current.trim() !== firedFor) return;
+        setSuggestions([]);
+        setIsSuggesting(false);
+      });
+  }, [debouncedQuery, isFocused, isAiMode, context]);
 
   // Lock body scroll + close on Escape while the overlay is open.
   useEffect(() => {
@@ -199,12 +233,12 @@ export function IntelligentSearchBar({
             } ${isAiMode ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02]" : "bg-primary/10 text-primary hover:bg-primary/20 hover:scale-[1.02]"}`}
           >
             <Sparkles className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isAiMode ? "text-primary-foreground animate-pulse" : "text-primary"}`} />
-            <span className="hidden sm:inline">{isAiMode ? "Twende AI" : "AI Search"}</span>
+            <span className="hidden sm:inline">{isAiMode ? "Twende AI" : t("search.aiSearch")}</span>
           </button>
         </div>
       </div>
     );
-  }, [isAiMode, compact, query, copy, onSearch, context]);
+  }, [isAiMode, compact, query, copy, onSearch, context, t]);
 
   const overlayContent = (
     <AnimatePresence>
@@ -246,10 +280,16 @@ export function IntelligentSearchBar({
                 <div className="overflow-y-auto overscroll-contain flex-1 min-h-0">
                   {query.trim().length === 0 ? (
                     <div className="flex flex-col sm:flex-row p-4 gap-6">
+                      {history.length === 0 && trending.length === 0 && (
+                        <div className="w-full py-8 text-center text-sm text-muted-foreground">
+                          {t("search.startTyping").replace("{label}", copy.label)}
+                        </div>
+                      )}
+
                       {history.length > 0 && (
-                        <div className="w-full sm:w-1/3">
+                        <div className={`w-full ${trending.length > 0 ? "sm:w-1/3" : ""}`}>
                           <h4 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                            <History className="h-3.5 w-3.5 shrink-0" /> Recent Searches
+                            <History className="h-3.5 w-3.5 shrink-0" /> {t("search.recentSearches")}
                           </h4>
                           <ul className="space-y-2">
                             {history.map((h, i) => (
@@ -275,46 +315,48 @@ export function IntelligentSearchBar({
                         </div>
                       )}
 
-                      {history.length > 0 && <div className="hidden sm:block w-px bg-border/40 shrink-0" />}
+                      {history.length > 0 && trending.length > 0 && <div className="hidden sm:block w-px bg-border/40 shrink-0" />}
 
-                      <div className="flex-1 min-w-0">
-                        <h4 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-                          <TrendingUp className="h-3.5 w-3.5 shrink-0" /> Trending in {copy.label}
-                        </h4>
-                        <div className="flex flex-col gap-2">
-                          {trending.map((tItem, i) => (
-                            <button
-                              key={i}
-                              onClick={() => handleSuggestionClick(tItem)}
-                              className="w-full flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-muted/50 border border-transparent hover:border-border transition-all group text-left"
-                            >
-                              <div className="flex flex-col min-w-0 flex-1">
-                                <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">{tItem.text}</span>
-                                <span className="text-xs text-muted-foreground">Trending</span>
-                              </div>
-                              {tItem.imageUrl ? (
-                                <div className="h-12 w-12 shrink-0 rounded-lg overflow-hidden bg-muted">
-                                  <img src={tItem.imageUrl} alt={tItem.text} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                      {trending.length > 0 && (
+                        <div className="flex-1 min-w-0">
+                          <h4 className="mb-4 text-[11px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                            <TrendingUp className="h-3.5 w-3.5 shrink-0" /> {t("search.trendingIn").replace("{label}", copy.label)}
+                          </h4>
+                          <div className="flex flex-col gap-2">
+                            {trending.map((tItem, i) => (
+                              <button
+                                key={i}
+                                onClick={() => handleSuggestionClick(tItem)}
+                                className="w-full flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-muted/50 border border-transparent hover:border-border transition-all group text-left"
+                              >
+                                <div className="flex flex-col min-w-0 flex-1">
+                                  <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">{tItem.text}</span>
+                                  <span className="text-xs text-muted-foreground">{t("search.trending")}</span>
                                 </div>
-                              ) : (
-                                <div className="h-12 w-12 shrink-0 rounded-lg bg-muted flex items-center justify-center p-2 group-hover:bg-primary/5 transition-colors">
-                                  <TrendingUp className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                                </div>
-                              )}
-                            </button>
-                          ))}
+                                {tItem.imageUrl ? (
+                                  <div className="h-12 w-12 shrink-0 rounded-lg overflow-hidden bg-muted">
+                                    <img src={tItem.imageUrl} alt={tItem.text} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                                  </div>
+                                ) : (
+                                  <div className="h-12 w-12 shrink-0 rounded-lg bg-muted flex items-center justify-center p-2 group-hover:bg-primary/5 transition-colors">
+                                    <TrendingUp className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                                  </div>
+                                )}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   ) : (
                     <div className="p-3">
-                      <h4 className="px-3 mb-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Suggestions</h4>
+                      <h4 className="px-3 mb-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{t("search.suggestions")}</h4>
                       <ul className="space-y-1">
                         {suggestions.map((item) => (
                           <li key={item.id}>
                             <button
                               onClick={() => handleSuggestionClick(item)}
-                              className="w-full flex items-center gap-4 p-2 rounded-xl hover:bg-accent transition-all text-left group overflow-hidden"
+                              className="w-full flex items-center gap-4 p-2 rounded-xl hover:bg-muted/50 border border-transparent hover:border-border transition-all text-left group overflow-hidden"
                             >
                               <div className={`flex items-center justify-center h-10 w-10 rounded-lg shrink-0 ${item.type === "shop" ? "bg-primary/10 text-primary" : item.type === "category" ? "bg-purple-500/10 text-purple-500" : "bg-muted text-muted-foreground"}`}>
                                 {renderIcon(item.type)}
@@ -329,7 +371,11 @@ export function IntelligentSearchBar({
                         ))}
                         {suggestions.length === 0 && (
                           <li className="px-3 py-6 text-sm text-muted-foreground text-center">
-                            Press Enter to search "{query}" in {copy.label}
+                            {isSuggesting
+                              ? t("search.searching")
+                              : t("search.pressEnter")
+                                  .replace("{query}", query)
+                                  .replace("{label}", copy.label)}
                           </li>
                         )}
                       </ul>
@@ -347,11 +393,11 @@ export function IntelligentSearchBar({
                         <Sparkles className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">Not finding what you need?</span>
-                        <span className="text-xs text-muted-foreground truncate">Ask Twende AI about {copy.label.toLowerCase()}</span>
+                        <span className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{t("search.notFinding")}</span>
+                        <span className="text-xs text-muted-foreground truncate">{t("search.askAiAbout").replace("{label}", copy.label)}</span>
                       </div>
                     </div>
-                    <Button size="sm" className="hidden sm:flex rounded-full px-4 shrink-0">Ask AI</Button>
+                    <Button size="sm" className="hidden sm:flex rounded-full px-4 shrink-0">{t("search.askAi")}</Button>
                   </div>
                 )}
               </div>
