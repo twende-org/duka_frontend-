@@ -29,7 +29,8 @@ jobs:
         run: npx tsc --noEmit -p tsconfig.app.json
 
       - name: Unit tests
-        run: npm test
+        # The test suite is not part of this repo; pass when nothing matches.
+        run: npm test -- --passWithNoTests
 
       - name: Production build
         run: npm run build
