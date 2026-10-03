@@ -152,6 +152,10 @@ export function fromApiShop(raw: unknown): Shop {
     fulfillmentMethods: stringArray(row.fulfillmentMethods),
     serviceCoverage: stringArray(row.serviceCoverage),
     productCapabilities: optionalObject(row.productCapabilities) as Shop["productCapabilities"],
+    aiIntakeMonthlyLimit:
+      typeof (row.aiIntakeMonthlyLimit ?? row.ai_intake_monthly_limit) === "number"
+        ? ((row.aiIntakeMonthlyLimit ?? row.ai_intake_monthly_limit) as number)
+        : null,
   };
 }
 

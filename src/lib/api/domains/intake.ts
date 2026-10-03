@@ -6,12 +6,13 @@
  * the app-facing shape camelCased and defensively normalized like the other
  * domains.
  */
-import type { IntakeApplySummary, IntakeBatch, IntakeDraft, IntakeSource } from "@/types";
+import type { IntakeApplySummary, IntakeBatch, IntakeDraft, IntakeQuota, IntakeSource } from "@/types";
 import { getApiClient } from "../index";
 import { unwrapList } from "../client";
 
 const BATCHES_PATH = "/api/v1/inventory/intake/";
 const DRAFTS_PATH = "/api/v1/inventory/intake-drafts/";
+const QUOTA_PATH = "/api/v1/inventory/intake/quota/";
 
 const MAX_PAGE_SIZE = 200;
 
@@ -116,6 +117,24 @@ export function getIntakeBatch(batchId: string): Promise<IntakeBatch> {
   return getApiClient()
     .get<unknown>(`${BATCHES_PATH}${encodeURIComponent(batchId)}/`)
     .then(fromApiIntakeBatch);
+}
+
+function fromApiIntakeQuota(raw: unknown): IntakeQuota {
+  const row = isRecord(raw) ? raw : {};
+  const limit = row.aiIntakeMonthlyLimit ?? row.limit;
+  const remaining = row.remaining;
+  return {
+    limit: limit == null ? null : numberOr(limit),
+    used: numberOr(row.used),
+    remaining: remaining == null ? null : numberOr(remaining),
+  };
+}
+
+/** Monthly AI photo allowance for one shop (null limit/remaining = unlimited). */
+export function getIntakeQuota(shopId: string): Promise<IntakeQuota> {
+  return getApiClient()
+    .get<unknown>(QUOTA_PATH, { query: { shop_id: shopId } })
+    .then(fromApiIntakeQuota);
 }
 
 export interface CreateIntakeBatchInput {

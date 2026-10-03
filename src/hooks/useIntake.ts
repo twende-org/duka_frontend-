@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as intakeApi from "@/lib/api/domains/intake";
 import { productsKeys } from "@/hooks/useProducts";
@@ -7,6 +8,7 @@ export const intakeKeys = {
   all: ["intake"] as const,
   batches: (shopId: string) => [...intakeKeys.all, shopId] as const,
   batch: (batchId: string) => [...intakeKeys.all, "batch", batchId] as const,
+  quota: (shopId: string) => [...intakeKeys.all, "quota", shopId] as const,
 };
 
 /** A batch still being parsed keeps the review workspace on its spinner. */
@@ -15,7 +17,8 @@ function hasBatchInFlight(batches: Array<{ status: string }>) {
 }
 
 export function useIntakeBatches(shopId: string | null) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const batchQuery = useQuery({
     queryKey: intakeKeys.batches(shopId!),
     queryFn: () => intakeApi.getIntakeBatches(shopId!),
     enabled: !!shopId,
@@ -25,6 +28,25 @@ export function useIntakeBatches(shopId: string | null) {
       if (batches && hasBatchInFlight(batches)) return 2000;
       return 60_000;
     },
+  });
+  // A parse that just finished changed the shop's AI usage — refresh the badge.
+  const inFlight = hasBatchInFlight(batchQuery.data ?? []);
+  const wasInFlight = useRef(false);
+  useEffect(() => {
+    if (wasInFlight.current && !inFlight && shopId) {
+      queryClient.invalidateQueries({ queryKey: intakeKeys.quota(shopId) });
+    }
+    wasInFlight.current = inFlight;
+  }, [inFlight, shopId, queryClient]);
+  return batchQuery;
+}
+
+/** Monthly AI photo allowance for the shop (badge + exhausted banner). */
+export function useIntakeQuota(shopId: string | null) {
+  return useQuery({
+    queryKey: intakeKeys.quota(shopId!),
+    queryFn: () => intakeApi.getIntakeQuota(shopId!),
+    enabled: !!shopId,
   });
 }
 

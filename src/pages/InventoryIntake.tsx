@@ -22,6 +22,7 @@ import {
   useCreateIntakeBatch,
   useDeleteIntakeDraft,
   useIntakeBatches,
+  useIntakeQuota,
   useUpdateIntakeDraft,
 } from "@/hooks/useIntake";
 import { Button } from "@/components/ui/button";
@@ -84,6 +85,7 @@ export default function InventoryIntake() {
   const shopId = useAppSelector((s) => s.shops.currentShopId);
 
   const { data: batchesData, isLoading } = useIntakeBatches(shopId);
+  const { data: quota } = useIntakeQuota(shopId);
   const updateDraft = useUpdateIntakeDraft(shopId, null);
   const removeDraft = useDeleteIntakeDraft(shopId, null);
   const applyBatch = useApplyIntakeBatch(shopId);
@@ -233,12 +235,40 @@ export default function InventoryIntake() {
         title={t("intake.title")}
         description={t("intake.subtitle")}
         actions={
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t("intake.newBatch")}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {quota && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "whitespace-nowrap",
+                  quota.limit !== null && quota.remaining === 0
+                    ? "border-red-300 text-red-600 dark:border-red-800 dark:text-red-400"
+                    : quota.limit !== null && quota.remaining <= quota.limit * 0.2
+                      ? "border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-400"
+                      : "text-muted-foreground"
+                )}
+              >
+                {quota.limit === null
+                  ? `${t("intake.quotaLabel")}: ${t("intake.quotaUnlimited")}`
+                  : `${t("intake.quotaLabel")}: ${quota.remaining}/${quota.limit}`}
+              </Badge>
+            )}
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t("intake.newBatch")}
+            </Button>
+          </div>
         }
       />
+
+      {quota && quota.limit !== null && quota.remaining === 0 && (
+        <Card className="border-amber-300 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30">
+          <CardContent className="flex items-start gap-3 py-4">
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-500" />
+            <p className="text-sm text-amber-800 dark:text-amber-300">{t("intake.quotaExhausted")}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {batches.length === 0 ? (
         isLoading ? (

@@ -1786,6 +1786,9 @@ const translations = {
   "intake.photoAdded": { sw: "Ukurasa wa ankara umeongezwa", en: "Invoice page added" },
   "intake.photoFailed": { sw: "Imeshindwa kuchakata picha", en: "Could not process the photo" },
   "intake.qrNotFound": { sw: "Hakuna QR iliyopatikana kwenye picha hii", en: "No QR code found in that image" },
+  "intake.quotaLabel": { sw: "Picha za AI", en: "AI photos" },
+  "intake.quotaUnlimited": { sw: "Hakuna kikomo", en: "Unlimited" },
+  "intake.quotaExhausted": { sw: "Picha za AI za mwezi huu zimeisha. Ingizo la QR bado linaweza kutumika bila kikomo.", en: "This month's AI photos are used up. QR intake still works without a limit." },
 
   // ─── B2B Stock Transfers ───
   "nav.transfers": { sw: "Uhamisho wa Stock", en: "Stock Transfers" },

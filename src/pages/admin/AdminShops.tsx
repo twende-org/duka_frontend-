@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Store, Search, Trash2, MapPin, User, ExternalLink, Eye, TestTube2, X, Package, TrendingUp, Phone } from "lucide-react";
+import { Store, Search, Trash2, MapPin, User, ExternalLink, Eye, TestTube2, X, Package, TrendingUp, Phone, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -38,6 +38,7 @@ export default function AdminShops() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [detailShop, setDetailShop] = useState<ShopWithOwner | null>(null);
+  const [quotaInput, setQuotaInput] = useState("");
 
   async function loadData() {
     setLoading(true);
@@ -64,6 +65,12 @@ export default function AdminShops() {
 
   useEffect(() => { loadData(); }, []);
 
+  useEffect(() => {
+    setQuotaInput(
+      detailShop?.aiIntakeMonthlyLimit == null ? "" : String(detailShop.aiIntakeMonthlyLimit)
+    );
+  }, [detailShop]);
+
   const filtered = shops.filter(
     (s) =>
       s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -83,6 +90,25 @@ export default function AdminShops() {
     try {
       await updateShop(id, { isPublic });
       toast.success(`Duka "${name}" sasa ${isPublic ? "linaonekana hadharani" : "limefichwa"}`);
+      loadData();
+    } catch (err: any) { toast.error(err.message); }
+  }
+
+  async function handleSaveQuota(shop: ShopWithOwner, raw: string) {
+    const trimmed = raw.trim();
+    const value = trimmed === "" ? null : Number(trimmed);
+    if (value !== null && (!Number.isInteger(value) || value < 0 || value > 32767)) {
+      toast.error("Weka namba halali (0 = hakuna kikomo)");
+      return;
+    }
+    try {
+      await updateShop(shop.id, { aiIntakeMonthlyLimit: value });
+      toast.success(
+        `Kikomo cha AI cha "${shop.name}": ${
+          value === null ? "chaguo-msingi" : value === 0 ? "hakuna kikomo" : `${value} picha/mwezi`
+        }`
+      );
+      setDetailShop(null);
       loadData();
     } catch (err: any) { toast.error(err.message); }
   }
@@ -229,6 +255,22 @@ export default function AdminShops() {
                 <div className="rounded-lg bg-success/5 border border-success/20 p-3">
                   <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1 flex items-center gap-1"><TrendingUp className="h-3 w-3" />Mauzo Jumla</p>
                   <p className="text-sm font-black text-success">TZS {(detailShop.salesTotal || 0).toLocaleString()}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3 col-span-2">
+                  <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1 flex items-center gap-1"><Sparkles className="h-3 w-3" />Kikomo cha Picha za AI (mwezi)</p>
+                  <p className="text-xs text-muted-foreground mb-2">Acha wazi = chaguo-msingi wa mfumo; 0 = hakuna kikomo. Ingizo la QR halilipi kikomo.</p>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={32767}
+                      value={quotaInput}
+                      onChange={(e) => setQuotaInput(e.target.value)}
+                      placeholder="Chaguo-msingi"
+                      className="h-8 w-36"
+                    />
+                    <Button size="sm" onClick={() => handleSaveQuota(detailShop, quotaInput)}>Hifadhi</Button>
+                  </div>
                 </div>
                 {detailShop.description && (
                   <div className="rounded-lg bg-muted/50 p-3 col-span-2">

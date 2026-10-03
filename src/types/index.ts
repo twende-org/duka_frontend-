@@ -48,6 +48,8 @@ export interface Shop {
   businessType?: string;
   sellingChannels?: string[];
   verificationStatus?: "unverified" | "pending" | "verified" | "rejected";
+  /** Platform-admin override of the monthly AI intake photo allowance (null = global default, 0 = unlimited). */
+  aiIntakeMonthlyLimit?: number | null;
   
   // Universal Shop Configuration Fields
   email?: string;
@@ -877,6 +879,14 @@ export interface IntakeApplySummary {
   created: number;
   updated: number;
   skipped: number;
+}
+
+export interface IntakeQuota {
+  /** Monthly AI photo allowance; null = unlimited. */
+  limit: number | null;
+  used: number;
+  /** Photos left this month; null = unlimited. */
+  remaining: number | null;
 }
 
 // Twende Duka — B2B wholesaler -> retailer stock transfers
