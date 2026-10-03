@@ -99,13 +99,14 @@ export function toProductDetails(raw: unknown): ProductDetails {
 }
 
 export async function extractProductDetailsFromImage(
-  imageBase64: string
+  imageBase64: string,
+  categoryNames?: string[]
 ): Promise<ProductDetails> {
   try {
-    const body = await getApiClient().post<unknown>("/api/v1/ai/extract-product/", {
-      image: imageBase64,
-    });
-    const row = isRecord(body) ? body : {};
+    const body: Record<string, unknown> = { image: imageBase64 };
+    if (categoryNames && categoryNames.length > 0) body.categoryNames = categoryNames;
+    const response = await getApiClient().post<unknown>("/api/v1/ai/extract-product/", body);
+    const row = isRecord(response) ? response : {};
     return toProductDetails(row.details);
   } catch (error) {
     console.error("AI Image Extraction Error:", error);
@@ -115,13 +116,14 @@ export async function extractProductDetailsFromImage(
 
 /** Every distinct product the model found in one photo (nameless entries dropped). */
 export async function extractProductDetailsListFromImage(
-  imageBase64: string
+  imageBase64: string,
+  categoryNames?: string[]
 ): Promise<ProductDetails[]> {
   try {
-    const body = await getApiClient().post<unknown>("/api/v1/ai/extract-products/", {
-      image: imageBase64,
-    });
-    const row = isRecord(body) ? body : {};
+    const body: Record<string, unknown> = { image: imageBase64 };
+    if (categoryNames && categoryNames.length > 0) body.categoryNames = categoryNames;
+    const response = await getApiClient().post<unknown>("/api/v1/ai/extract-products/", body);
+    const row = isRecord(response) ? response : {};
     const list = Array.isArray(row.details) ? row.details : [];
     return list
       .map(toProductDetails)

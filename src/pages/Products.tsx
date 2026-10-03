@@ -59,13 +59,14 @@ import { CameraCapture } from "@/components/common/CameraCapture";
 import { Facebook, Share2 } from "lucide-react";
 import { fetchFacebookConnection, postProductToFacebook } from "@/lib/api/domains/social";
 import AIAdGeneratorDialog from "@/components/shops/AIAdGeneratorDialog";
-import { ScanToIntakeDialog } from "@/components/products/ScanToIntakeDialog";
+import { ScanToIntakeDialog, type PhotoSubmitResult, type PhotoSubmitRow } from "@/components/products/ScanToIntakeDialog";
 import Fuse from "fuse.js";
 
-import { categoryTree, getCategoryName, normalizeCategories, mapBusinessToProductCategories } from "@/lib/categories";
+import { categoryTree, getCategoryName, normalizeCategories, mapBusinessToProductCategories, matchCategoryByName } from "@/lib/categories";
+import { UNITS, matchUnitByName } from "@/lib/units";
 
 const defaultForm = {
-  name: "", categories: [] as string[], buyingPrice: 0 as number | string, sellingPrice: 0 as number | string, 
+  name: "", categories: [] as string[], buyingPrice: 0 as number | string, sellingPrice: 0 as number | string,
   moq: 1 as number | string,
   prices: [] as { type: string; price: number | string }[],
   supplier: "", sku: "", barcode: "", brand: "", description: "", unit: "pcs",
@@ -78,7 +79,7 @@ const defaultForm = {
   initialStock: 0 as number | string,
 };
 
-const units = ["pcs", "kg", "g", "litre", "ml", "box", "pack", "metre", "dozen", "pair", "set", "roll", "bag", "ctn"];
+const units = UNITS;
 
 export default function Products() {
   const dispatch = useAppDispatch();
@@ -284,16 +285,13 @@ export default function Products() {
 
   const populateFormFromDraft = (draft: IntakeDraft) => {
     const treeMatches = shopCategoryTree.flatMap((g) => g.children || []);
-    const needle = draft.categoryName.trim().toLowerCase();
-    const matched = needle
-      ? treeMatches.find((c) => c.name.toLowerCase() === needle || c.id.toLowerCase() === needle)
-      : undefined;
-    const unitMatch = units.find((u) => u.toLowerCase() === draft.unit.trim().toLowerCase());
+    const matchedId = matchCategoryByName(draft.categoryName, treeMatches);
+    const unitMatch = matchUnitByName(draft.unit);
     setEditingProduct(null);
     setForm((f) => ({
       ...f,
       name: draft.nameEn || f.name,
-      categories: matched ? [matched.id] : f.categories,
+      categories: matchedId ? [matchedId] : f.categories,
       buyingPrice: draft.buyingPrice ? String(draft.buyingPrice) : f.buyingPrice,
       sellingPrice: draft.sellingPrice ? String(draft.sellingPrice) : f.sellingPrice,
       unit: unitMatch || "pcs",
@@ -310,19 +308,15 @@ export default function Products() {
         .join("; ");
       const description = [details.description, extraText].filter(Boolean).join("\n");
       const treeMatches = shopCategoryTree.flatMap((g) => g.children || []);
-      const needle = (details.category ?? "").trim().toLowerCase();
-      const matched = needle
-        ? treeMatches.find((c) => c.name.toLowerCase() === needle || c.id.toLowerCase() === needle)
-        : undefined;
-      const unitName = details.unit?.trim().toLowerCase();
-      const unitValue = unitName ? units.find((u) => u.toLowerCase() === unitName) : undefined;
+      const matchedId = matchCategoryByName(details.category, treeMatches);
+      const unitValue = matchUnitByName(details.unit);
       return {
         ...f,
         name: details.name || f.name,
         brand: details.brand || f.brand,
         description: description || f.description,
         barcode: details.barcode || f.barcode,
-        categories: matched ? [matched.id] : f.categories,
+        categories: matchedId ? [matchedId] : f.categories,
         buyingPrice: details.buyingPrice !== undefined ? String(details.buyingPrice) : f.buyingPrice,
         sellingPrice: details.sellingPrice !== undefined ? String(details.sellingPrice) : f.sellingPrice,
         initialStock: details.quantity !== undefined ? String(details.quantity) : f.initialStock,
@@ -335,6 +329,92 @@ export default function Products() {
       };
     });
     setScanFilled(true);
+  };
+
+  /**
+   * Photo-scan review table: create each row as a real product right away
+   * (same pipeline as the Add Product form) instead of handing off to the
+   * form. Rows that fail stay in the table for a retry.
+   */
+  const handleSubmitPhotoRows = async (rows: PhotoSubmitRow[], image: string): Promise<PhotoSubmitResult> => {
+    if (!currentShopId) {
+      toast.error(t("products.selectShop"));
+      return { created: 0, failed: rows };
+    }
+    let imageUrl = "";
+    if (image.startsWith("data:")) {
+      try {
+        imageUrl = await uploadImageOnApi(image, {
+          folder: "products",
+          filename: `photoscan_${Date.now()}.jpg`,
+        });
+      } catch (err) {
+        console.warn("Photo-scan image upload failed, continuing without image:", err);
+      }
+    }
+    const treeMatches = shopCategoryTree.flatMap((g) => g.children || []);
+    let created = 0;
+    const failed: PhotoSubmitRow[] = [];
+    for (const row of rows) {
+      try {
+        const matchedId = matchCategoryByName(row.category, treeMatches);
+        const productData = {
+          name: row.name,
+          categories: matchedId ? [matchedId] : [],
+          buyingPrice: row.buyingPrice ?? 0,
+          sellingPrice: row.sellingPrice ?? 0,
+          moq: 1,
+          prices: row.prices ?? [],
+          supplier: "",
+          sku: row.sku || "",
+          barcode: row.barcode || "",
+          brand: row.brand || "",
+          description: row.description || "",
+          unit: row.unit || "pcs",
+          weight: row.weight || "",
+          size: row.size || "",
+          color: row.color || "",
+          expiryDate: row.expiryDate || "",
+          status: "active" as const,
+          tags: [] as string[],
+          warranty: "",
+          taxRate: 0,
+          imageUrls: imageUrl ? [imageUrl] : [],
+          imageUrl,
+          storeLocation: row.storeLocation || "",
+          publishToFacebook: row.publishToFacebook ?? false,
+          publishToDirectory: row.publishToDirectory ?? false,
+          publishToDeliveryApp: row.publishToDeliveryApp ?? false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        const id = await createProductMutation.mutateAsync({ ...productData, shopId: currentShopId } as unknown as Omit<Product, "id">);
+
+        if (row.quantity && row.quantity > 0) {
+          dispatch(adjustStock({
+            productId: id,
+            productName: row.name,
+            shopId: currentShopId,
+            type: "adjustment",
+            quantity: row.quantity,
+            reason: "Product Initialization",
+            userId: user?.id || "unknown",
+            userName: user?.displayName || "System",
+          }));
+        }
+
+        logActivity({ action: "product_created", category: "product", details: `${row.name}`, metadata: { name: row.name, source: "photo_scan" } });
+        created += 1;
+      } catch (err) {
+        console.error("Photo-scan product create failed:", err);
+        toast.error(`${row.name}: ${err instanceof Error ? err.message : t("products.failed")}`);
+        failed.push(row);
+      }
+    }
+    if (created > 0) {
+      toast.success(t("products.photoAddedMany").replace("{n}", String(created)));
+    }
+    return { created, failed };
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -577,8 +657,8 @@ export default function Products() {
               <DialogTrigger asChild>
                 <Button disabled={!canAddProduct && !editingProduct}><Plus className="h-4 w-4 mr-2" />{t("products.add")}</Button>
               </DialogTrigger>
-                            <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto rounded-3xl p-4 sm:p-6 bg-background/95 backdrop-blur-sm">
-                <DialogHeader className="flex flex-row items-center justify-between pr-8 border-b pb-4 mb-2">
+                            <DialogContent className="w-[96vw] max-w-[96vw] h-[95vh] max-h-[95vh] overflow-hidden rounded-3xl p-4 sm:p-6 bg-background/95 backdrop-blur-sm grid-rows-[auto_minmax(0,1fr)]">
+                <DialogHeader className="flex flex-row items-center justify-between pr-8 border-b pb-4">
                   <div>
                     <DialogTitle className="text-2xl">{editingProduct ? t("products.editTitle") : t("products.addTitle")}</DialogTitle>
                     <p className="text-sm text-muted-foreground mt-1">Jaza taarifa za bidhaa kwa usahihi</p>
@@ -602,35 +682,38 @@ export default function Products() {
                   isOpen={scanOpen}
                   onClose={() => setScanOpen(false)}
                   shopId={currentShopId}
+                  categoryGroups={shopCategoryTree}
+                  fbConnected={fbConnected}
                   onParsed={(drafts) => {
                     setScanOpen(false);
                     if (drafts.length === 0) return;
                     setParsedQueue(drafts.slice(1));
                     populateFormFromDraft(drafts[0]);
                   }}
+                  onSubmitProducts={handleSubmitPhotoRows}
                   onProductDetected={(detected, image) => {
                     const [head, ...rest] = detected;
                     applyDetailsToForm(head, image);
                     if (rest.length > 0) setDetailsQueue(rest);
                   }}
                 />
-                {(submitting || compressing) && <Progress value={compressing ? 100 : progress} className={cn("h-1 mb-4", compressing && "animate-pulse")} />}
-                {scanFilled && !editingProduct && (
-                  <div className="mb-3 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
-                    <ScanLine className="h-4 w-4 shrink-0 text-primary" />
-                    <span className="flex-1">{t("products.filledFromScan")}</span>
-                    {parsedQueue.length + detailsQueue.length > 0 && (
-                      <Badge variant="outline" className="shrink-0">
-                        {t("products.scanQueue").replace("{n}", String(parsedQueue.length + detailsQueue.length))}
-                      </Badge>
-                    )}
-                  </div>
-                )}
-                 <form onSubmit={handleSubmit} className="space-y-6">
-                  
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    {/* LEFT COLUMN */}
-                    <div className="lg:col-span-7 space-y-6">
+                 <form onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-4">
+                  {(submitting || compressing) && <Progress value={compressing ? 100 : progress} className={cn("h-1 shrink-0", compressing && "animate-pulse")} />}
+                  {scanFilled && !editingProduct && (
+                    <div className="flex shrink-0 items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+                      <ScanLine className="h-4 w-4 shrink-0 text-primary" />
+                      <span className="flex-1">{t("products.filledFromScan")}</span>
+                      {parsedQueue.length + detailsQueue.length > 0 && (
+                        <Badge variant="outline" className="shrink-0">
+                          {t("products.scanQueue").replace("{n}", String(parsedQueue.length + detailsQueue.length))}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {/* MAIN COLUMN */}
+                    <div className="space-y-6 lg:col-span-2 xl:col-span-1">
                       
                       {/* GENERAL INFO */}
                       <div className="p-5 rounded-2xl border bg-card/50 shadow-sm space-y-4">
@@ -722,7 +805,7 @@ export default function Products() {
                         <p className="text-xs text-muted-foreground mb-4">Ongeza picha nzuri zinazovutia wateja wako.</p>
                         
                         <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
-                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                        <div className="grid grid-cols-4 sm:grid-cols-6 xl:grid-cols-4 gap-3">
                            {form.imageUrls.map((url, i) => (
                              <div key={i} className="relative group aspect-square">
                                 <ProfessionalImage src={url} className="rounded-xl border shadow-sm h-full w-full object-cover" />
@@ -759,8 +842,8 @@ export default function Products() {
                       </div>
                     </div>
 
-                    {/* RIGHT COLUMN */}
-                    <div className="lg:col-span-5 space-y-6">
+                    {/* PRICING COLUMN */}
+                    <div className="space-y-6">
                       
                       {/* PRICING & INVENTORY */}
                       <div className="p-5 rounded-2xl border bg-card/50 shadow-sm space-y-4">
@@ -903,7 +986,10 @@ export default function Products() {
                           </div>
                         </div>
                       </div>
+                    </div>
 
+                      {/* DETAILS COLUMN */}
+                      <div className="space-y-6">
                       {/* ADVANCED */}
                       <div className="p-5 rounded-2xl border bg-card/50 shadow-sm space-y-4">
                         <h3 className="font-bold text-lg flex items-center gap-2"><Box className="h-5 w-5 text-primary" /> Ziada</h3>
@@ -973,9 +1059,10 @@ export default function Products() {
 
                     </div>
                   </div>
+                  </div>
 
                   {/* FORM ACTIONS */}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-6 mt-6 border-t border-border/40">
+                  <div className="flex shrink-0 flex-col sm:flex-row gap-3 pt-4 border-t border-border/40">
                     <Button type="submit" className="flex-1 h-12 rounded-xl font-bold text-md" disabled={submitting || compressing}>
                       {submitting ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : (editingProduct ? t("products.update") : t("common.add"))}
                     </Button>

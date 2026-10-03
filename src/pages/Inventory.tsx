@@ -32,9 +32,9 @@ import { PageLoader, Loader } from "@/components/common/Loader";
 import { useSearchParams, Link } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppSelector } from "@/store/hooks";
-import { usePaginatedProducts } from "@/hooks/useProducts";
+import { useCreateProduct, usePaginatedProducts } from "@/hooks/useProducts";
 import { useInventory, useStockMovements, useAdjustStock, useUpdateMinStock } from "@/hooks/useInventory";
-import { getCategoryName, normalizeCategories } from "@/lib/categories";
+import { categoryTree, getCategoryName, mapBusinessToProductCategories, matchCategoryByName, normalizeCategories } from "@/lib/categories";
 import { ErrorAlert } from "@/components/ErrorAlert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +57,7 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { getPermissions } from "@/lib/permissions";
 import { useUserRole } from "@/hooks/useUserRole";
-import { ScanToIntakeDialog } from "@/components/products/ScanToIntakeDialog";
+import { ScanToIntakeDialog, type PhotoSubmitResult, type PhotoSubmitRow } from "@/components/products/ScanToIntakeDialog";
 import { ImportProductsDialog } from "@/components/products/ImportProductsDialog";
 import { getProducts } from "@/lib/api/domains/products";
 import { downloadProductsWorkbook } from "@/lib/excel/productsWorkbook";
@@ -67,6 +67,9 @@ import { cn } from "@/lib/utils";
 import type { Product, StockMovement } from "@/types";
 import Fuse from "fuse.js";
 import { useAppDispatch } from "@/store/hooks";
+import { useActivityLogger } from "@/hooks/useActivityLogger";
+import { uploadImageOnApi } from "@/lib/api/domains/uploads";
+import { fetchFacebookConnection } from "@/lib/api/domains/social";
 
 export default function Inventory() {
   const { t } = useI18n();
@@ -107,6 +110,54 @@ export default function Inventory() {
   const { data: movements = [] } = useStockMovements(currentShopId, managingProduct?.id || null);
   const adjustStockMutation = useAdjustStock(currentShopId);
   const updateMinStockMutation = useUpdateMinStock(currentShopId, currentBranchId);
+  const createProductMutation = useCreateProduct(currentShopId);
+  const { log: logActivity } = useActivityLogger();
+  const user = useAppSelector((s) => s.auth.user);
+  const [fbConnected, setFbConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    async function checkFb() {
+      if (!currentShopId) return;
+      try {
+        const connection = await fetchFacebookConnection(currentShopId);
+        setFbConnected(connection !== null);
+      } catch (err) {
+        console.error("Facebook connection check failed:", err);
+        setFbConnected(false);
+      }
+    }
+    checkFb();
+  }, [currentShopId]);
+
+  // Filter category tree based on shop's configured categories
+  const shopCategoryTree = useMemo(() => {
+    let effectiveCats = currentShop?.productCategories;
+
+    // Fallback migration logic for legacy shops
+    if (!effectiveCats || effectiveCats.length === 0) {
+      if (currentShop?.categories && currentShop.categories.length > 0) {
+        effectiveCats = mapBusinessToProductCategories(currentShop.categories);
+      }
+    }
+
+    if (!effectiveCats || effectiveCats.length === 0) {
+      return categoryTree;
+    }
+
+    const shopCatIds = new Set(effectiveCats);
+    return categoryTree
+      .map(group => {
+        // If the shop selected the entire parent group, include it with all its children
+        if (shopCatIds.has(group.id)) {
+          return { ...group };
+        }
+
+        // Otherwise, filter children to only the ones the shop specifically selected
+        const children = group.children?.filter(cat => shopCatIds.has(cat.id)) || [];
+        return { ...group, children };
+      })
+      .filter(group => group.children && group.children.length > 0);
+  }, [currentShop]);
 
   const [restockOpen, setRestockOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -241,13 +292,100 @@ export default function Inventory() {
   const onUpdateMinStock = async () => {
     if (!managingProduct || !currentShopId) return;
     try {
-      await updateMinStockMutation.mutateAsync({ 
-        productId: managingProduct.id, 
-        minStock: Number(minStockLevel) 
+      await updateMinStockMutation.mutateAsync({
+        productId: managingProduct.id,
+        minStock: Number(minStockLevel)
       });
       toast.success(t("common.save"));
       setIsManageModalOpen(false);
     } catch (err) { toast.error(t("common.error")); }
+  };
+
+  /**
+   * Photo-scan review table: create each row as a real product right away
+   * (same pipeline as the Add Product form) and set its initial stock.
+   * Rows that fail stay in the table for a retry.
+   */
+  const handleSubmitPhotoRows = async (rows: PhotoSubmitRow[], image: string): Promise<PhotoSubmitResult> => {
+    if (!currentShopId) {
+      toast.error(t("products.selectShop"));
+      return { created: 0, failed: rows };
+    }
+    let imageUrl = "";
+    if (image.startsWith("data:")) {
+      try {
+        imageUrl = await uploadImageOnApi(image, {
+          folder: "products",
+          filename: `photoscan_${Date.now()}.jpg`,
+        });
+      } catch (err) {
+        console.warn("Photo-scan image upload failed, continuing without image:", err);
+      }
+    }
+    const treeMatches = shopCategoryTree.flatMap((g) => g.children || []);
+    let created = 0;
+    const failed: PhotoSubmitRow[] = [];
+    for (const row of rows) {
+      try {
+        const matchedId = matchCategoryByName(row.category, treeMatches);
+        const productData = {
+          name: row.name,
+          categories: matchedId ? [matchedId] : [],
+          buyingPrice: row.buyingPrice ?? 0,
+          sellingPrice: row.sellingPrice ?? 0,
+          moq: 1,
+          prices: row.prices ?? [],
+          supplier: "",
+          sku: row.sku || "",
+          barcode: row.barcode || "",
+          brand: row.brand || "",
+          description: row.description || "",
+          unit: row.unit || "pcs",
+          weight: row.weight || "",
+          size: row.size || "",
+          color: row.color || "",
+          expiryDate: row.expiryDate || "",
+          status: "active" as const,
+          tags: [] as string[],
+          warranty: "",
+          taxRate: 0,
+          imageUrls: imageUrl ? [imageUrl] : [],
+          imageUrl,
+          storeLocation: row.storeLocation || "",
+          publishToFacebook: row.publishToFacebook ?? false,
+          publishToDirectory: row.publishToDirectory ?? false,
+          publishToDeliveryApp: row.publishToDeliveryApp ?? false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        const id = await createProductMutation.mutateAsync({ ...productData, shopId: currentShopId } as unknown as Omit<Product, "id">);
+
+        if (row.quantity && row.quantity > 0) {
+          await adjustStockMutation.mutateAsync({
+            productId: id,
+            productName: row.name,
+            shopId: currentShopId,
+            branchId: currentBranchId || "",
+            type: "in",
+            quantity: row.quantity,
+            reason: "Product Initialization",
+            userId: user?.id || "unknown",
+            userName: user?.displayName || "System",
+          });
+        }
+
+        logActivity({ action: "product_created", category: "product", details: `${row.name}`, metadata: { name: row.name, source: "photo_scan" } });
+        created += 1;
+      } catch (err) {
+        console.error("Photo-scan product create failed:", err);
+        toast.error(`${row.name}: ${err instanceof Error ? err.message : t("products.failed")}`);
+        failed.push(row);
+      }
+    }
+    if (created > 0) {
+      toast.success(t("products.photoAddedMany").replace("{n}", String(created)));
+    }
+    return { created, failed };
   };
 
   const statusTabs = useMemo(() => {
@@ -745,7 +883,14 @@ export default function Inventory() {
 
       {permissions.canAdjustInventory && (
         <>
-          <ScanToIntakeDialog isOpen={restockOpen} onClose={() => setRestockOpen(false)} shopId={currentShopId} />
+          <ScanToIntakeDialog
+            isOpen={restockOpen}
+            onClose={() => setRestockOpen(false)}
+            shopId={currentShopId}
+            categoryGroups={shopCategoryTree}
+            fbConnected={fbConnected}
+            onSubmitProducts={handleSubmitPhotoRows}
+          />
           <ImportProductsDialog isOpen={importOpen} onClose={() => setImportOpen(false)} shopId={currentShopId} branchId={currentBranchId} />
         </>
       )}
