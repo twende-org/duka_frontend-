@@ -7,6 +7,7 @@
  *
  *   POST /api/v1/ai/assistant/       -> { reply }
  *   POST /api/v1/ai/extract-product/ -> { details: {name?, brand?, ...} }
+ *   POST /api/v1/ai/generate-copy/   -> { text }
  *
  * The widgets render the legacy error copy, so failures are re-thrown with the
  * exact messages the browser helpers always produced.
@@ -86,7 +87,13 @@ export function toProductDetails(raw: unknown): ProductDetails {
   }
   for (const field of NUMBER_FIELDS) {
     const value = row[field];
-    if (typeof value === "number" && Number.isFinite(value)) details[field] = value;
+    if (typeof value === "number" && Number.isFinite(value)) {
+      details[field] = value;
+    } else if (typeof value === "string") {
+      const match = value.match(/\d[\d,]*(?:\.\d+)?/);
+      const parsed = match ? Number(match[0].replace(/,/g, "")) : NaN;
+      if (Number.isFinite(parsed)) details[field] = parsed;
+    }
   }
   if (isRecord(row.extra)) {
     const extra: Record<string, string> = {};
@@ -132,4 +139,16 @@ export async function extractProductDetailsListFromImage(
     console.error("AI Image Extraction Error:", error);
     throw new Error(EXTRACTION_ERROR);
   }
+}
+
+/**
+ * Raw completion for a fully built marketing-copy prompt (the ad generator
+ * and the feed/sold-out caption dialogs). The prompt/model used to run in
+ * the browser with the bundled `VITE_OPENROUTER_API_KEY`; dialogs keep their
+ * local fence-stripping/JSON parsing, so the raw text is returned as-is.
+ */
+export async function generateAICopy(prompt: string): Promise<string> {
+  const body = await getApiClient().post<unknown>("/api/v1/ai/generate-copy/", { prompt });
+  const row = isRecord(body) ? body : {};
+  return typeof row.text === "string" ? row.text : "";
 }

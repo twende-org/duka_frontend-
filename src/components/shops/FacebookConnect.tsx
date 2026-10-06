@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { runtimeEnv } from "@/lib/api/config";
-import { Facebook, Check, AlertCircle, Loader2, Link2, ExternalLink } from "lucide-react";
+import { Facebook, Check, AlertCircle, Loader2, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -37,7 +37,6 @@ export default function FacebookConnect({ shopId }: FacebookConnectProps) {
   const [availablePages, setAvailablePages] = useState<FacebookPage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [envToken, setEnvToken] = useState<string | null>(runtimeEnv("VITE_FACEBOOK_ACCESS_TOKEN") || null);
   const [manualToken, setManualToken] = useState("");
   const [showManual, setShowManual] = useState(false);
 
@@ -80,6 +79,10 @@ export default function FacebookConnect({ shopId }: FacebookConnectProps) {
   }, [shopId]);
 
   const handleConnect = () => {
+    if (!FB_APP_ID) {
+      toast.error("Facebook App ID is not configured. Set VITE_FACEBOOK_APP_ID in the environment.");
+      return;
+    }
     setConnecting(true);
     // Construct Facebook Login URL
     // Scopes needed: pages_manage_posts, pages_show_list, pages_read_engagement, instagram_basic, instagram_content_publish
@@ -137,49 +140,6 @@ export default function FacebookConnect({ shopId }: FacebookConnectProps) {
     } catch (err: any) {
       console.error("Error saving FB connection:", err);
       toast.error(err.message || "Failed to save connection.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleConnectWithEnvToken = async () => {
-    if (!envToken) return;
-    setSaving(true);
-    try {
-      // 1. Fetch info about the token/pages
-      // We'll try to get accounts associated with this token
-      const res = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${envToken}`);
-      const data = await res.json();
-      
-      if (data.error) {
-        throw new Error(data.error.message || "Failed to fetch pages with this token.");
-      }
-
-      const pages = data.data as FacebookPage[];
-      if (pages.length === 0) {
-        // Maybe it's a direct Page Token? Try to get the page info directly
-        const pageRes = await fetch(`https://graph.facebook.com/v18.0/me?fields=id,name,access_token&access_token=${envToken}`);
-        const pageData = await pageRes.json();
-        
-        if (pageData.error || !pageData.id) {
-          toast.error("Token belongs to no pages or is invalid.");
-          return;
-        }
-        
-        setAvailablePages([{
-          id: pageData.id,
-          name: pageData.name,
-          access_token: envToken, // Assume the token in .env IS the page access token
-          category: ""
-        }]);
-      } else {
-        setAvailablePages(pages);
-      }
-      
-      toast.success("Token valid! Select a page to connect.");
-    } catch (err: any) {
-      console.error("Env Token Error:", err);
-      toast.error(err.message || "Invalid or expired token.");
     } finally {
       setSaving(false);
     }
@@ -346,29 +306,13 @@ export default function FacebookConnect({ shopId }: FacebookConnectProps) {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              {envToken && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setManualToken(envToken);
-                    handleConnectWithEnvToken();
-                  }}
-                  disabled={saving}
-                  className="w-full text-[11px] h-8 gap-2 border-primary/20 text-primary hover:bg-primary/5"
-                >
-                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
-                  Use Token from .env
-                </Button>
-              )}
-              <Button 
-                variant="ghost" 
-                onClick={() => setShowManual(true)}
-                className="text-[10px] h-6 text-muted-foreground hover:text-foreground"
-              >
-                Pata access token mwenyewe (Manual)
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              onClick={() => setShowManual(true)}
+              className="text-[10px] h-6 text-muted-foreground hover:text-foreground"
+            >
+              Pata access token mwenyewe (Manual)
+            </Button>
           )}
         </div>
       )}

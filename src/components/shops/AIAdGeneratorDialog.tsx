@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { runtimeEnv } from "@/lib/api/config";
+import { generateAICopy } from "@/lib/api/domains/ai";
+import { fetchTikTokConnection } from "@/lib/api/domains/tiktok";
+import { fetchFacebookConnection, postProductToFacebook } from "@/lib/api/domains/social";
 import {
   Sparkles,
   Copy,
@@ -26,6 +28,7 @@ import {
 } from "lucide-react";
 import { BsWhatsapp } from "react-icons/bs";
 import { motion, AnimatePresence } from "framer-motion";
+import TikTokPublishDialog from "@/components/shops/TikTokPublishDialog";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +36,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -91,14 +104,29 @@ export default function AIAdGeneratorDialog({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<keyof GeneratedAd | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [ttConnected, setTtConnected] = useState(false);
+  const [fbConnected, setFbConnected] = useState(false);
+  const [publishTikTokOpen, setPublishTikTokOpen] = useState(false);
+  const [fbConfirmOpen, setFbConfirmOpen] = useState(false);
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    void Promise.allSettled([
+      fetchTikTokConnection(shop.id),
+      fetchFacebookConnection(shop.id),
+    ]).then(([tt, fb]) => {
+      if (!active) return;
+      setTtConnected(tt.status === "fulfilled" && tt.value !== null);
+      setFbConnected(fb.status === "fulfilled" && fb.value !== null);
+    });
+    return () => {
+      active = false;
+    };
+  }, [open, shop.id]);
 
   const handleGenerate = async () => {
-    const apiKey = runtimeEnv("VITE_OPENROUTER_API_KEY");
-    if (!apiKey) {
-      toast.error("AI API key missing. Please contact support.");
-      return;
-    }
-
     setLoading(true);
     setStep(2);
     setAd(null);
@@ -137,29 +165,8 @@ TOA MATOKEO KATIKA MFUMO WA JSON PEKEE wenye funguo hizi:
 Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${platform}. Jibu kwa JSON pekee bila maelezo ya ziada.`;
 
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": window.location.origin,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-lite",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.7,
-        }),
-      });
+      let content = await generateAICopy(prompt);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("OpenRouter Error:", errorData);
-        throw new Error("AI Generation failed");
-      }
-      
-      const data = await response.json();
-      let content = data.choices?.[0]?.message?.content || "";
-      
       // Basic JSON extraction in case of markdown wrapping
       if (content.includes("```json")) {
         content = content.split("```json")[1].split("```")[0];
@@ -205,8 +212,32 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
     window.open(`https://wa.me/?text=${encoded}`, "_blank");
   };
 
+  const tikTokCaption = () =>
+    ad ? [ad.short_version?.trim() || ad.caption, ad.hashtags].filter(Boolean).join("\n\n") : "";
+
+  const handlePostToMeta = async () => {
+    if (!ad || posting) return;
+    setPosting(true);
+    try {
+      const message = [ad.caption, ad.hashtags].filter(Boolean).join("\n\n");
+      const result = await postProductToFacebook(shop.id, product.id, true, message);
+      if (platform === "instagram" && !result.instagramPostId) {
+        toast.info("Imechapishwa kwenye Facebook — Instagram haijaunganishwa na ukurasa wako.");
+      } else if (platform === "instagram") {
+        toast.success("Imechapishwa kwenye Instagram!");
+      } else {
+        toast.success("Imechapishwa kwenye Facebook!");
+      }
+      setFbConfirmOpen(false);
+    } catch {
+      toast.error(platform === "instagram" ? "Imeshindwa kuchapisha Instagram." : "Imeshindwa kuchapisha Facebook.");
+    } finally {
+      setPosting(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setStep(1); setAd(null); } }}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setStep(1); setAd(null); setPublishTikTokOpen(false); setFbConfirmOpen(false); } }}>
       <DialogTrigger asChild>
         {trigger ?? (
           <Button variant="outline" size="sm" className="gap-2 rounded-xl group hover:border-primary/50 transition-all">
@@ -311,7 +342,7 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
                     <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                       <Smile className="h-3 w-3" /> Select Tone
                     </label>
-                    <div className="grid grid-cols-3 xs:grid-cols-3 sm:grid-cols-6 gap-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                       {tones.map((t) => (
                         <button
                           key={t.id}
@@ -452,7 +483,50 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
                       </AnimatePresence>
                     </Tabs>
 
-                    <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-border/50">
+                    <div className="space-y-3 pt-4 border-t border-border/50">
+                      {platform === "tiktok" && (ttConnected ? (
+                        <Button
+                          onClick={() => setPublishTikTokOpen(true)}
+                          className="w-full h-12 rounded-xl bg-black hover:bg-black/80 text-white font-black uppercase tracking-widest gap-2 shadow-lg"
+                        >
+                          <Video className="h-4 w-4" />
+                          Post to TikTok
+                        </Button>
+                      ) : (
+                        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
+                          <Video className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                          <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                            TikTok haijaunganishwa. Nenda Social kuunganisha akaunti, kisha tuma moja kwa moja.
+                          </p>
+                        </div>
+                      ))}
+                      {(platform === "facebook" || platform === "instagram") && (fbConnected ? (
+                        <Button
+                          onClick={() => setFbConfirmOpen(true)}
+                          className="w-full h-12 rounded-xl bg-[#1877F2] hover:bg-[#1877F2]/90 text-white font-black uppercase tracking-widest gap-2 shadow-lg shadow-blue-500/20"
+                        >
+                          {platform === "instagram" ? <Instagram className="h-4 w-4" /> : <Facebook className="h-4 w-4" />}
+                          {platform === "instagram" ? "Post to Instagram" : "Post to Facebook"}
+                        </Button>
+                      ) : (
+                        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
+                          {platform === "instagram"
+                            ? <Instagram className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                            : <Facebook className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />}
+                          <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                            {platform === "instagram" ? "Instagram" : "Facebook"} haijaunganishwa. Nenda Social kuunganisha akaunti, kisha tuma moja kwa moja.
+                          </p>
+                        </div>
+                      ))}
+                      {platform === "whatsapp" && (
+                        <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-muted/20 p-3">
+                          <BsWhatsapp className="mt-0.5 h-4 w-4 shrink-0 text-[#25D366]" />
+                          <p className="text-[11px] font-semibold text-muted-foreground">
+                            WhatsApp hutumia "Share to WhatsApp" hapa chini — unaweza kutuma tangazo bila kuunganisha akaunti.
+                          </p>
+                        </div>
+                      )}
+                      <div className="flex flex-col sm:flex-row gap-3">
                       <Button 
                         onClick={handleGenerate} 
                         variant="outline" 
@@ -478,6 +552,7 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
                         {copiedField === 'all' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                         Copy All
                       </Button>
+                      </div>
                     </div>
                   </div>
                 ) : null}
@@ -487,7 +562,7 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-muted/10 border-t flex items-center justify-between flex-shrink-0">
+        <div className="px-4 py-4 sm:px-6 bg-muted/10 border-t flex items-center justify-between gap-3 flex-shrink-0">
           <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">
             Powered by Gemini AI • Professional Marketing
           </p>
@@ -532,6 +607,50 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Meta post confirmation — same promise contract as the Products page flow */}
+      <AlertDialog open={fbConfirmOpen} onOpenChange={(v) => !v && !posting && setFbConfirmOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              {platform === "instagram"
+                ? <Instagram className="h-5 w-5 text-[#E4405F]" />
+                : <Facebook className="h-5 w-5 text-[#1877F2]" />}
+              {platform === "instagram" ? "Post to Instagram?" : "Post to Facebook?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {platform === "instagram" ? (
+                <>This will share <span className="font-bold">{product.name}</span> with the Instagram business account linked to your Facebook Page.</>
+              ) : (
+                <>This will publish <span className="font-bold">{product.name}</span> to your connected Facebook Page.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={posting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handlePostToMeta();
+              }}
+              className="bg-[#1877F2] text-white hover:bg-[#1877F2]/90"
+              disabled={posting}
+            >
+              {posting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Share2 className="h-4 w-4 mr-2" />}
+              Publish Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* TikTok pre-publish sheet — privacy/interaction/disclosure options live there */}
+      <TikTokPublishDialog
+        open={publishTikTokOpen}
+        onOpenChange={setPublishTikTokOpen}
+        product={product}
+        shopId={shop.id}
+        initialCaption={tikTokCaption()}
+      />
     </Dialog>
   );
 }

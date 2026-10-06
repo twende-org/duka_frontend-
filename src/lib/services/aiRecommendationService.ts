@@ -1,6 +1,6 @@
 // src/lib/services/aiRecommendationService.ts
 
-import { runtimeEnv } from "@/lib/api/config";
+import { getApiClient } from "@/lib/api/index";
 
 export interface ParsedAIFilter {
   originalQuery: string;
@@ -14,64 +14,27 @@ export interface ParsedAIFilter {
 }
 
 /**
- * Stubs a future AI service that parses natural language into structured commerce filters.
- * e.g., "Samsung phone under TZS 500,000" -> { brand: "Samsung", maxPrice: 500000, category: "phone" }
+ * Parses natural language into structured commerce filters via the anonymous
+ * server endpoint (the prompt/model used to run here with the bundled
+ * VITE_OPENROUTER_API_KEY). e.g., "Samsung phone under TZS 500,000" ->
+ * { brand: "Samsung", maxPrice: 500000, category: "phone" }. Any failure —
+ * including a missing server key (503) — falls back to local basic parsing,
+ * exactly like the legacy browser helper.
  */
 export async function parseQueryWithAI(naturalLanguageQuery: string): Promise<ParsedAIFilter> {
-  const apiKey = runtimeEnv("VITE_OPENROUTER_API_KEY");
-  if (!apiKey) {
-    console.error("OpenRouter API key missing. Falling back to basic parsing.");
-    return basicFallbackParsing(naturalLanguageQuery);
-  }
-
-  const systemPrompt = `You are a commerce search intent analyzer for a Tanzanian marketplace. You extract structured filter criteria from a user's natural language search query in either English or Swahili.
-Respond ONLY with a JSON object with the following structure, with NO markdown formatting, NO backticks, and NO additional text:
-{
-  "cleanQuery": "the core search terms translated into BOTH English and Swahili, separated by a space (so it matches products named in either language)",
-  "category": "product category if specified (e.g. phones, electronics, shoes)",
-  "brand": "brand name if specified",
-  "maxPrice": numeric maximum price in TZS if specified,
-  "minPrice": numeric minimum price in TZS if specified
-}
-
-Example 1: "I want to buy a samsung phone under 500,000 tzs"
-{"cleanQuery": "phone simu", "category": "phones", "brand": "samsung", "maxPrice": 500000}
-
-Example 2: "natafuta viatu vya kukimbilia chini ya elfu 50"
-{"cleanQuery": "viatu vya kukimbilia running shoes", "category": "shoes", "maxPrice": 50000}
-`;
-
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": window.location.origin,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        max_tokens: 150,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: naturalLanguageQuery }
-        ],
-        temperature: 0.1,
-      }),
-    });
+    const parsed = await getApiClient().post<{
+      cleanQuery?: string;
+      category?: string;
+      brand?: string;
+      maxPrice?: number;
+      minPrice?: number;
+    }>(
+      "/api/v1/ai/parse-search/",
+      { query: naturalLanguageQuery },
+      { auth: false },
+    );
 
-    if (!response.ok) {
-      throw new Error(`OpenRouter API Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    let content = data.choices?.[0]?.message?.content || "";
-    
-    // Attempt to parse JSON response
-    // Strip markdown blocks if the AI accidentally adds them
-    content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(content);
-    
     return {
       originalQuery: naturalLanguageQuery,
       cleanQuery: parsed.cleanQuery || naturalLanguageQuery,
@@ -81,7 +44,6 @@ Example 2: "natafuta viatu vya kukimbilia chini ya elfu 50"
       minPrice: parsed.minPrice,
       isNaturalLanguage: true,
     };
-    
   } catch (error) {
     console.error("AI Search Error:", error);
     return basicFallbackParsing(naturalLanguageQuery);

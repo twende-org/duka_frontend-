@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { getShopSettings, updateShopSettings } from "@/lib/api/domains/shopSettings";
+import FacebookConnect from "@/components/shops/FacebookConnect";
+import TikTokConnect from "@/components/shops/TikTokConnect";
 import type { ShopSettings } from "@/types";
 import { Loader2 } from "lucide-react";
 import { PageLoader } from "@/components/common/Loader";
@@ -132,10 +134,8 @@ export default function Social() {
               </p>
               
               <div className="pt-4 space-y-3">
-                <Button variant="outline" className="w-full flex items-center gap-2" onClick={() => toast("OAuth Flow Mocked")}>
-                  <Link2 className="w-4 h-4" /> {t("social.connectMeta") || "Connect Meta Account"}
-                </Button>
-                <Button 
+                <FacebookConnect shopId={currentShopId} />
+                <Button
                   onClick={handleCatalogSync} 
                   disabled={syncingFB}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-2">
@@ -161,9 +161,7 @@ export default function Social() {
               </p>
               
               <div className="pt-4 space-y-3">
-                <Button variant="outline" className="w-full flex items-center gap-2" onClick={() => toast("OAuth Flow Mocked")}>
-                  <Link2 className="w-4 h-4" /> {t("social.connectTiktok") || "Connect TikTok Account"}
-                </Button>
+                <TikTokConnect shopId={currentShopId} />
               </div>
             </div>
 

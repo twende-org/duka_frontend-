@@ -59,16 +59,16 @@ export function SalesAnalytics({
   const profitMarginPercent = totalRevenue > 0 ? Math.round((totalProfit / totalRevenue) * 100) : 0;
 
   return (
-    <div className="bg-card/60 backdrop-blur-md rounded-2xl p-5 sm:p-6 border border-border shadow-sm fade-in-up space-y-6">
+    <div className="bg-card/60 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-border shadow-sm fade-in-up space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-extrabold text-foreground flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            {t("dashboard.weeklySales")} & Financial Performance
+        <div className="min-w-0">
+          <h2 className="text-base sm:text-lg font-extrabold text-foreground flex items-center gap-2 flex-wrap">
+            <TrendingUp className="h-5 w-5 text-primary shrink-0" />
+            <span className="break-words">{t("dashboard.weeklySales")} &amp; {t("dashboard.financialPerformance")}</span>
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {t("dashboard.sales.desc" as any) || "Revenue trends, profit margins, and growth statistics"}
+            {t("dashboard.sales.desc")}
           </p>
         </div>
 
@@ -82,7 +82,7 @@ export function SalesAnalytics({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t("dashboard.time.7days" as any)}
+            {t("dashboard.time.7days")}
           </button>
           <button
             onClick={() => setTimeRange(30)}
@@ -92,7 +92,7 @@ export function SalesAnalytics({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t("dashboard.time.30days" as any)}
+            {t("dashboard.time.30days")}
           </button>
           <button
             onClick={() => setTimeRange(90)}
@@ -102,39 +102,39 @@ export function SalesAnalytics({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t("dashboard.time.90days" as any) || "90 Days"}
+            {t("dashboard.time.90days")}
           </button>
         </div>
       </div>
 
       {/* Aggregated Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 bg-muted/20 p-4 rounded-xl border border-border/40">
-        <div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 bg-muted/20 p-3 sm:p-4 rounded-xl border border-border/40">
+        <div className="min-w-0">
           <p className="text-[11px] font-semibold text-muted-foreground uppercase">
-            {t("dashboard.sales.periodTotal" as any) || "Period Total Sales"}
+            {t("dashboard.sales.periodTotal")}
           </p>
-          <p className="text-lg font-black text-foreground tracking-tight">
+          <p className="text-base sm:text-lg font-black text-foreground tracking-tight break-words">
             {formatTZS(totalRevenue)}
           </p>
         </div>
         {permissions.canViewDashboardProfit && (
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] font-semibold text-muted-foreground uppercase">
-              {t("dashboard.sales.periodNet" as any) || "Period Net Profit"}
+              {t("dashboard.sales.periodNet")}
             </p>
-            <p className="text-lg font-black text-success tracking-tight">
+            <p className="text-base sm:text-lg font-black text-success tracking-tight break-words">
               {formatTZS(totalProfit)}
             </p>
           </div>
         )}
         {permissions.canViewDashboardProfit && (
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] font-semibold text-muted-foreground uppercase">
-              {t("dashboard.sales.margin" as any) || "Net Profit Margin"}
+              {t("dashboard.sales.margin")}
             </p>
-            <p className="text-lg font-black text-info tracking-tight flex items-center gap-1">
+            <p className="text-base sm:text-lg font-black text-info tracking-tight flex items-center gap-1">
               {profitMarginPercent}%
-              <ArrowUpRight className="h-4 w-4 text-success" />
+              <ArrowUpRight className="h-4 w-4 text-success shrink-0" />
             </p>
           </div>
         )}

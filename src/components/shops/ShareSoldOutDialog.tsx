@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { runtimeEnv } from "@/lib/api/config";
+import { generateAICopy } from "@/lib/api/domains/ai";
 import {
   Package,
   Search,
@@ -332,9 +332,6 @@ export default function ShareSoldOutDialog({
   });
 
   const generateAiCaption = async (product: Product) => {
-    const apiKey = runtimeEnv("VITE_OPENROUTER_API_KEY");
-    if (!apiKey) { toast.error("AI API key missing"); return; }
-
     setLoadingAi((prev) => ({ ...prev, [product.id]: true }));
     try {
       const prompt = `Wewe ni mtaalamu wa masoko ya kidijitali.
@@ -351,23 +348,7 @@ export default function ShareSoldOutDialog({
       5. USIWEKE LINK YOYOTE.
       6. Mwishoni andika: "${language === "sw" ? "Piga simu" : "Call"}: ${shop.phone || "Wasiliana nasi"}"`;
 
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": window.location.origin,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash-lite",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.7,
-        }),
-      });
-
-      if (!response.ok) throw new Error("AI Error");
-      const data = await response.json();
-      const caption = data.choices?.[0]?.message?.content || "";
+      const caption = await generateAICopy(prompt);
       setAiCaptions((prev) => ({ ...prev, [product.id]: caption.trim() }));
       toast.success("Tayari!");
     } catch {

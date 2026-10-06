@@ -58,6 +58,9 @@ import { ProfessionalImage } from "@/components/common/ProfessionalImage";
 import { CameraCapture } from "@/components/common/CameraCapture";
 import { Facebook, Share2 } from "lucide-react";
 import { fetchFacebookConnection, postProductToFacebook } from "@/lib/api/domains/social";
+import { fetchTikTokConnection } from "@/lib/api/domains/tiktok";
+import { TikTokIcon } from "@/components/shops/TikTokConnect";
+import TikTokPublishDialog from "@/components/shops/TikTokPublishDialog";
 import AIAdGeneratorDialog from "@/components/shops/AIAdGeneratorDialog";
 import { ScanToIntakeDialog, type PhotoSubmitResult, type PhotoSubmitRow } from "@/components/products/ScanToIntakeDialog";
 import Fuse from "fuse.js";
@@ -116,8 +119,10 @@ export default function Products() {
   const [progress, setProgress] = useState(0);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [productToShare, setProductToShare] = useState<Product | null>(null);
+  const [productToShareTikTok, setProductToShareTikTok] = useState<Product | null>(null);
   const [sharing, setSharing] = useState(false);
   const [fbConnected, setFbConnected] = useState<boolean | null>(null);
+  const [ttConnected, setTtConnected] = useState<boolean | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
   const [parsedQueue, setParsedQueue] = useState<IntakeDraft[]>([]);
   const [detailsQueue, setDetailsQueue] = useState<ProductDetails[]>([]);
@@ -130,7 +135,7 @@ export default function Products() {
   }, [user?.id, shops.length, dispatch]);
 
   useEffect(() => {
-    async function checkFb() {
+    async function checkSocial() {
       if (!currentShopId) return;
       try {
         const connection = await fetchFacebookConnection(currentShopId);
@@ -139,8 +144,15 @@ export default function Products() {
         console.error("Facebook connection check failed:", err);
         setFbConnected(false);
       }
+      try {
+        const connection = await fetchTikTokConnection(currentShopId);
+        setTtConnected(connection !== null);
+      } catch (err) {
+        console.error("TikTok connection check failed:", err);
+        setTtConnected(false);
+      }
     }
-    checkFb();
+    checkSocial();
   }, [currentShopId]);
 
   useEffect(() => {
@@ -657,10 +669,10 @@ export default function Products() {
               <DialogTrigger asChild>
                 <Button disabled={!canAddProduct && !editingProduct}><Plus className="h-4 w-4 mr-2" />{t("products.add")}</Button>
               </DialogTrigger>
-                            <DialogContent className="w-[96vw] max-w-[96vw] h-[95vh] max-h-[95vh] overflow-hidden rounded-3xl p-4 sm:p-6 bg-background/95 backdrop-blur-sm grid-rows-[auto_minmax(0,1fr)]">
+                            <DialogContent className="h-[100dvh] max-h-[100dvh] w-[100vw] max-w-[100vw] overflow-hidden rounded-none bg-background/95 p-4 backdrop-blur-sm grid-rows-[auto_minmax(0,1fr)] sm:h-[95vh] sm:max-h-[95vh] sm:w-[96vw] sm:max-w-[96vw] sm:rounded-3xl sm:p-6">
                 <DialogHeader className="flex flex-row items-center justify-between pr-8 border-b pb-4">
                   <div>
-                    <DialogTitle className="text-2xl">{editingProduct ? t("products.editTitle") : t("products.addTitle")}</DialogTitle>
+                    <DialogTitle className="text-xl sm:text-2xl">{editingProduct ? t("products.editTitle") : t("products.addTitle")}</DialogTitle>
                     <p className="text-sm text-muted-foreground mt-1">Jaza taarifa za bidhaa kwa usahihi</p>
                   </div>
                   {!editingProduct && (
@@ -1380,6 +1392,15 @@ export default function Products() {
                               <Facebook className="h-4 w-4" />
                             </button>
                           )}
+                          {ttConnected && (
+                            <button
+                              onClick={() => setProductToShareTikTok(p)}
+                              className="p-2 bg-background hover:bg-black/10 dark:hover:bg-white/10 text-foreground rounded-xl transition-all hover:scale-105 shadow-sm border border-border/40"
+                              title="Post to TikTok"
+                            >
+                              <TikTokIcon className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1517,12 +1538,21 @@ export default function Products() {
                               />
                             )}
                             {fbConnected && (
-                              <button 
-                                onClick={() => setProductToShare(p)} 
+                              <button
+                                onClick={() => setProductToShare(p)}
                                 className="p-1.5 hover:bg-blue-50 rounded-md shadow-sm border border-blue-100 transition-all text-[#1877F2]"
                                 title="Post to Facebook"
                               >
                                 <Facebook className="h-4 w-4" />
+                              </button>
+                            )}
+                            {ttConnected && (
+                              <button
+                                onClick={() => setProductToShareTikTok(p)}
+                                className="p-1.5 hover:bg-black/10 rounded-md shadow-sm border transition-all text-foreground"
+                                title="Post to TikTok"
+                              >
+                                <TikTokIcon className="h-4 w-4" />
                               </button>
                             )}
                           </div>
@@ -1644,6 +1674,14 @@ export default function Products() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* TikTok pre-publish sheet (Content Sharing Guidelines compliant) */}
+      <TikTokPublishDialog
+        open={!!productToShareTikTok}
+        onOpenChange={(open) => !open && setProductToShareTikTok(null)}
+        product={productToShareTikTok}
+        shopId={currentShopId || ""}
+      />
     </div>
   );
 }

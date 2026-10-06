@@ -232,6 +232,211 @@ const CategoryCellPicker: React.FC<{
 };
 
 /**
+ * The expanded "more details" editor for one photo-review row: description,
+ * physical attributes, SKU/location, price tiers, publishing switches and any
+ * extra fields the model read off the packaging. Shared by the desktop review
+ * table's expanded row and the mobile card layout so both stay identical.
+ */
+const PhotoRowEditor: React.FC<{
+  row: PhotoRow;
+  index: number;
+  editPhotoRow: (index: number, patch: Partial<PhotoRow>) => void;
+  editPhotoPrice: (index: number, priceIndex: number, patch: Partial<{ type: string; price: number | string }>) => void;
+  removePhotoPrice: (index: number, priceIndex: number) => void;
+  addPhotoPrice: (index: number) => void;
+  editPhotoExtra: (index: number, key: string, value: string) => void;
+  fbConnected?: boolean | null;
+}> = ({ row, index, editPhotoRow, editPhotoPrice, removePhotoPrice, addPhotoPrice, editPhotoExtra, fbConnected }) => {
+  const { t } = useI18n();
+  const extraEntries = Object.entries(row.extra ?? {});
+  return (
+    <div className="space-y-3 py-1">
+      <div className="space-y-1">
+        <Label className="text-xs">{t("products.fDescription")}</Label>
+        <Textarea
+          className="min-h-[60px]"
+          value={row.description ?? ""}
+          onChange={(e) => editPhotoRow(index, { description: e.target.value })}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="space-y-1">
+          <Label className="text-xs">{t("products.fSize")}</Label>
+          <Input
+            className="h-8"
+            value={row.size ?? ""}
+            onChange={(e) => editPhotoRow(index, { size: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">{t("products.fWeight")}</Label>
+          <Input
+            className="h-8"
+            value={row.weight ?? ""}
+            onChange={(e) => editPhotoRow(index, { weight: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">{t("products.fColor")}</Label>
+          <Input
+            className="h-8"
+            value={row.color ?? ""}
+            onChange={(e) => editPhotoRow(index, { color: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">{t("products.fExpiry")}</Label>
+          <Input
+            className="h-8"
+            type="date"
+            value={row.expiryDate ?? ""}
+            onChange={(e) => editPhotoRow(index, { expiryDate: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label className="text-xs">SKU</Label>
+          <Input
+            className="h-8"
+            value={row.sku ?? ""}
+            onChange={(e) => editPhotoRow(index, { sku: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">{t("products.location")}</Label>
+          <Input
+            className="h-8"
+            value={row.storeLocation ?? ""}
+            placeholder="Mfano: Aisle 4, Side B"
+            onChange={(e) => editPhotoRow(index, { storeLocation: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+          Tiers &amp; Wholesale Pricing
+        </p>
+        {(row.prices ?? []).map((pRecord, pIdx) => (
+          <div key={pIdx} className="flex items-center gap-2 rounded-xl border border-border/50 bg-background p-2">
+            <Select
+              value={pRecord.type}
+              onValueChange={(val) => editPhotoPrice(index, pIdx, { type: val })}
+            >
+              <SelectTrigger className="h-8 w-[130px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="wholesale">Wholesale</SelectItem>
+                <SelectItem value="corporate">Corporate</SelectItem>
+                <SelectItem value="promotional">Promo</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              className="h-8 flex-1"
+              type="number"
+              min={0}
+              step="any"
+              value={pRecord.price}
+              onChange={(e) => editPhotoPrice(index, pIdx, { price: e.target.value })}
+              placeholder="Price"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => removePhotoPrice(index, pIdx)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 w-full rounded-lg border-dashed border-2 bg-background text-xs font-bold"
+          onClick={() => addPhotoPrice(index)}
+        >
+          + {t("products.addPriceTier")}
+        </Button>
+      </div>
+      <div className="space-y-2 rounded-xl border bg-background/60 p-3">
+        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+          Usambazaji
+        </p>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-background p-2">
+          <div className="flex items-center gap-2">
+            <Store className="h-4 w-4 shrink-0 text-primary" />
+            <div className="space-y-0.5">
+              <Label className="text-xs font-bold leading-none">Twende duka marketplace</Label>
+              <p className="text-[10px] text-muted-foreground">Onyesha bidhaa mtandaoni</p>
+            </div>
+          </div>
+          <Switch
+            checked={row.publishToDirectory ?? false}
+            onCheckedChange={(checked) => editPhotoRow(index, { publishToDirectory: checked })}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-background p-2">
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 shrink-0 text-primary" />
+            <div className="space-y-0.5">
+              <Label className="text-xs font-bold leading-none">Tulete App</Label>
+              <p className="text-[10px] text-muted-foreground">Inaweza kuagizwa mtandaoni</p>
+            </div>
+          </div>
+          <Switch
+            checked={row.publishToDeliveryApp ?? false}
+            onCheckedChange={(checked) => editPhotoRow(index, { publishToDeliveryApp: checked })}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-background p-2">
+          <div className="flex items-center gap-2">
+            <Facebook className="h-4 w-4 shrink-0 text-[#1877F2]" />
+            <div className="space-y-0.5">
+              <Label className="text-xs font-bold leading-none text-[#1877F2]">Facebook &amp; Instagram</Label>
+              <p className="text-[10px] text-muted-foreground">Post mtandaoni ukisave</p>
+            </div>
+          </div>
+          <Switch
+            checked={row.publishToFacebook ?? false}
+            onCheckedChange={(checked) => {
+              if (checked && !fbConnected) {
+                toast.error(t("social.connectFirst") || "Please connect your Facebook account in the Social tab first.");
+                return;
+              }
+              editPhotoRow(index, { publishToFacebook: checked });
+            }}
+          />
+        </div>
+      </div>
+      {extraEntries.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground">
+            {t("products.photoMoreDetails")}
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {extraEntries.map(([key, value]) => (
+              <div key={key} className="space-y-1">
+                <Label className="text-xs">{key}</Label>
+                <Input
+                  className="h-8"
+                  value={value}
+                  onChange={(e) => editPhotoExtra(index, key, e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">{t("products.photoExtraHint")}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
  * Opt-in capture entry inside Add Product: the product's own QR, invoice/records,
  * or a product photo — each by camera or upload. A product QR (barcode number,
  * URL, or plain name) pre-fills the product form directly; invoice pages and
@@ -602,7 +807,7 @@ export const ScanToIntakeDialog: React.FC<ScanToIntakeDialogProps> = ({ isOpen, 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-5xl">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-h-[92vh] sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ScanLine className="h-5 w-5 text-primary" />
@@ -779,8 +984,140 @@ export const ScanToIntakeDialog: React.FC<ScanToIntakeDialogProps> = ({ isOpen, 
                     <Badge variant="secondary">{photoRows.length}</Badge>
                     <span className="text-xs text-muted-foreground">{t("products.photoReviewDesc")}</span>
                   </div>
-                  {/* Table scrolls on its own inner div too — hide both scrollbars. */}
-                  <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>div]:[scrollbar-width:none] [&>div::-webkit-scrollbar]:hidden">
+                  {/* Mobile/tablet: one card per detected product, so every field (incl. Qty) is reachable without horizontal scrolling. */}
+                  <div className="space-y-3 lg:hidden">
+                    {photoRows.map((row, index) => {
+                      const expanded = photoExpanded.has(index);
+                      return (
+                        <div key={`photo-card-${index}`} className="space-y-3 rounded-2xl border bg-background/60 p-3">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              className="h-9 flex-1"
+                              value={row.name ?? ""}
+                              placeholder={t("products.name")}
+                              onChange={(e) => editPhotoRow(index, { name: e.target.value })}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 shrink-0 text-muted-foreground"
+                              title={expanded ? t("common.close") : t("products.photoMoreDetails")}
+                              onClick={() => togglePhotoExpanded(index)}
+                            >
+                              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 shrink-0 text-muted-foreground hover:text-red-600"
+                              onClick={() => removePhotoRow(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">{t("intake.colCategory")}</Label>
+                            {categoryGroups && categoryGroups.length > 0 ? (
+                              <CategoryCellPicker
+                                value={row.category ?? ""}
+                                placeholder={t("products.category")}
+                                groups={categoryGroups}
+                                onSelect={(name) => editPhotoRow(index, { category: name })}
+                              />
+                            ) : (
+                              <Input
+                                className="h-9"
+                                value={row.category ?? ""}
+                                onChange={(e) => editPhotoRow(index, { category: e.target.value })}
+                              />
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t("products.brand")}</Label>
+                              <Input
+                                className="h-9"
+                                value={row.brand ?? ""}
+                                onChange={(e) => editPhotoRow(index, { brand: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Barcode</Label>
+                              <Input
+                                className="h-9"
+                                value={row.barcode ?? ""}
+                                onChange={(e) => editPhotoRow(index, { barcode: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t("intake.colUnit")}</Label>
+                              <Select
+                                value={row.unit && UNITS.includes(row.unit) ? row.unit : ""}
+                                onValueChange={(v) => editPhotoRow(index, { unit: v })}
+                              >
+                                <SelectTrigger className="h-9 w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {UNITS.map((u) => (
+                                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t("intake.colQty")}</Label>
+                              <Input
+                                className="h-9"
+                                type="number"
+                                min={0}
+                                value={row.quantity ?? ""}
+                                onChange={(e) => editPhotoRow(index, { quantity: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t("intake.colBuy")}</Label>
+                              <Input
+                                className="h-9"
+                                type="number"
+                                min={0}
+                                step="any"
+                                value={row.buyingPrice ?? ""}
+                                onChange={(e) => editPhotoRow(index, { buyingPrice: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t("intake.colSell")}</Label>
+                              <Input
+                                className="h-9"
+                                type="number"
+                                min={0}
+                                step="any"
+                                value={row.sellingPrice ?? ""}
+                                onChange={(e) => editPhotoRow(index, { sellingPrice: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                          {expanded && (
+                            <PhotoRowEditor
+                              row={row}
+                              index={index}
+                              editPhotoRow={editPhotoRow}
+                              editPhotoPrice={editPhotoPrice}
+                              removePhotoPrice={removePhotoPrice}
+                              addPhotoPrice={addPhotoPrice}
+                              editPhotoExtra={editPhotoExtra}
+                              fbConnected={fbConnected}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Desktop (lg+): the full editable table — the 900px min width fits inside the max-w-5xl dialog. */}
+                  <div className="hidden overflow-x-auto lg:block">
                     <Table className="min-w-[900px]">
                       <TableHeader>
                         <TableRow>
@@ -798,7 +1135,6 @@ export const ScanToIntakeDialog: React.FC<ScanToIntakeDialogProps> = ({ isOpen, 
                       <TableBody>
                         {photoRows.map((row, index) => {
                           const expanded = photoExpanded.has(index);
-                          const extraEntries = Object.entries(row.extra ?? {});
                           return (
                             <React.Fragment key={`photo-${index}`}>
                               <TableRow className="bg-background/60">
@@ -908,189 +1244,16 @@ export const ScanToIntakeDialog: React.FC<ScanToIntakeDialogProps> = ({ isOpen, 
                               {expanded && (
                                 <TableRow className="bg-muted/30 hover:bg-muted/30">
                                   <TableCell colSpan={9}>
-                                    <div className="space-y-3 py-1">
-                                      <div className="space-y-1">
-                                        <Label className="text-xs">{t("products.fDescription")}</Label>
-                                        <Textarea
-                                          className="min-h-[60px]"
-                                          value={row.description ?? ""}
-                                          onChange={(e) => editPhotoRow(index, { description: e.target.value })}
-                                        />
-                                      </div>
-                                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                        <div className="space-y-1">
-                                          <Label className="text-xs">{t("products.fSize")}</Label>
-                                          <Input
-                                            className="h-8"
-                                            value={row.size ?? ""}
-                                            onChange={(e) => editPhotoRow(index, { size: e.target.value })}
-                                          />
-                                        </div>
-                                        <div className="space-y-1">
-                                          <Label className="text-xs">{t("products.fWeight")}</Label>
-                                          <Input
-                                            className="h-8"
-                                            value={row.weight ?? ""}
-                                            onChange={(e) => editPhotoRow(index, { weight: e.target.value })}
-                                          />
-                                        </div>
-                                        <div className="space-y-1">
-                                          <Label className="text-xs">{t("products.fColor")}</Label>
-                                          <Input
-                                            className="h-8"
-                                            value={row.color ?? ""}
-                                            onChange={(e) => editPhotoRow(index, { color: e.target.value })}
-                                          />
-                                        </div>
-                                        <div className="space-y-1">
-                                          <Label className="text-xs">{t("products.fExpiry")}</Label>
-                                          <Input
-                                            className="h-8"
-                                            type="date"
-                                            value={row.expiryDate ?? ""}
-                                            onChange={(e) => editPhotoRow(index, { expiryDate: e.target.value })}
-                                          />
-                                        </div>
-                                      </div>
-                                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                        <div className="space-y-1">
-                                          <Label className="text-xs">SKU</Label>
-                                          <Input
-                                            className="h-8"
-                                            value={row.sku ?? ""}
-                                            onChange={(e) => editPhotoRow(index, { sku: e.target.value })}
-                                          />
-                                        </div>
-                                        <div className="space-y-1">
-                                          <Label className="text-xs">{t("products.location")}</Label>
-                                          <Input
-                                            className="h-8"
-                                            value={row.storeLocation ?? ""}
-                                            placeholder="Mfano: Aisle 4, Side B"
-                                            onChange={(e) => editPhotoRow(index, { storeLocation: e.target.value })}
-                                          />
-                                        </div>
-                                      </div>
-                                      <div className="space-y-2">
-                                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                                          Tiers &amp; Wholesale Pricing
-                                        </p>
-                                        {(row.prices ?? []).map((pRecord, pIdx) => (
-                                          <div key={pIdx} className="flex items-center gap-2 rounded-xl border border-border/50 bg-background p-2">
-                                            <Select
-                                              value={pRecord.type}
-                                              onValueChange={(val) => editPhotoPrice(index, pIdx, { type: val })}
-                                            >
-                                              <SelectTrigger className="h-8 w-[130px]">
-                                                <SelectValue />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="wholesale">Wholesale</SelectItem>
-                                                <SelectItem value="corporate">Corporate</SelectItem>
-                                                <SelectItem value="promotional">Promo</SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                            <Input
-                                              className="h-8 flex-1"
-                                              type="number"
-                                              min={0}
-                                              step="any"
-                                              value={pRecord.price}
-                                              onChange={(e) => editPhotoPrice(index, pIdx, { price: e.target.value })}
-                                              placeholder="Price"
-                                            />
-                                            <Button
-                                              type="button"
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                              onClick={() => removePhotoPrice(index, pIdx)}
-                                            >
-                                              <X className="h-4 w-4" />
-                                            </Button>
-                                          </div>
-                                        ))}
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-8 w-full rounded-lg border-dashed border-2 bg-background text-xs font-bold"
-                                          onClick={() => addPhotoPrice(index)}
-                                        >
-                                          + {t("products.addPriceTier")}
-                                        </Button>
-                                      </div>
-                                      <div className="space-y-2 rounded-xl border bg-background/60 p-3">
-                                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                                          Usambazaji
-                                        </p>
-                                        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-background p-2">
-                                          <div className="flex items-center gap-2">
-                                            <Store className="h-4 w-4 shrink-0 text-primary" />
-                                            <div className="space-y-0.5">
-                                              <Label className="text-xs font-bold leading-none">Twende duka marketplace</Label>
-                                              <p className="text-[10px] text-muted-foreground">Onyesha bidhaa mtandaoni</p>
-                                            </div>
-                                          </div>
-                                          <Switch
-                                            checked={row.publishToDirectory ?? false}
-                                            onCheckedChange={(checked) => editPhotoRow(index, { publishToDirectory: checked })}
-                                          />
-                                        </div>
-                                        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-background p-2">
-                                          <div className="flex items-center gap-2">
-                                            <Package className="h-4 w-4 shrink-0 text-primary" />
-                                            <div className="space-y-0.5">
-                                              <Label className="text-xs font-bold leading-none">Tulete App</Label>
-                                              <p className="text-[10px] text-muted-foreground">Inaweza kuagizwa mtandaoni</p>
-                                            </div>
-                                          </div>
-                                          <Switch
-                                            checked={row.publishToDeliveryApp ?? false}
-                                            onCheckedChange={(checked) => editPhotoRow(index, { publishToDeliveryApp: checked })}
-                                          />
-                                        </div>
-                                        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-background p-2">
-                                          <div className="flex items-center gap-2">
-                                            <Facebook className="h-4 w-4 shrink-0 text-[#1877F2]" />
-                                            <div className="space-y-0.5">
-                                              <Label className="text-xs font-bold leading-none text-[#1877F2]">Facebook &amp; Instagram</Label>
-                                              <p className="text-[10px] text-muted-foreground">Post mtandaoni ukisave</p>
-                                            </div>
-                                          </div>
-                                          <Switch
-                                            checked={row.publishToFacebook ?? false}
-                                            onCheckedChange={(checked) => {
-                                              if (checked && !fbConnected) {
-                                                toast.error(t("social.connectFirst") || "Please connect your Facebook account in the Social tab first.");
-                                                return;
-                                              }
-                                              editPhotoRow(index, { publishToFacebook: checked });
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-                                      {extraEntries.length > 0 && (
-                                        <div className="space-y-2">
-                                          <p className="text-xs font-semibold text-muted-foreground">
-                                            {t("products.photoMoreDetails")}
-                                          </p>
-                                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                            {extraEntries.map(([key, value]) => (
-                                              <div key={key} className="space-y-1">
-                                                <Label className="text-xs">{key}</Label>
-                                                <Input
-                                                  className="h-8"
-                                                  value={value}
-                                                  onChange={(e) => editPhotoExtra(index, key, e.target.value)}
-                                                />
-                                              </div>
-                                            ))}
-                                          </div>
-                                          <p className="text-xs text-muted-foreground">{t("products.photoExtraHint")}</p>
-                                        </div>
-                                      )}
-                                    </div>
+                                    <PhotoRowEditor
+                                      row={row}
+                                      index={index}
+                                      editPhotoRow={editPhotoRow}
+                                      editPhotoPrice={editPhotoPrice}
+                                      removePhotoPrice={removePhotoPrice}
+                                      addPhotoPrice={addPhotoPrice}
+                                      editPhotoExtra={editPhotoExtra}
+                                      fbConnected={fbConnected}
+                                    />
                                   </TableCell>
                                 </TableRow>
                               )}

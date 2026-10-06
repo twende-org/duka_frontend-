@@ -149,7 +149,7 @@ export function AIAssistantWidget() {
         className={cn(
           "fixed z-[160] flex flex-col overflow-hidden border border-white/10 bg-background/95 shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1)",
           "bottom-0 left-0 right-0 w-full rounded-t-[2.5rem] border-b-0 origin-bottom", // Mobile
-          "lg:bottom-6 lg:right-6 lg:left-auto w-[400px] lg:rounded-[2rem] lg:border-b lg:origin-bottom-right", // Desktop
+          "lg:bottom-6 lg:right-6 lg:left-auto lg:w-[400px] lg:rounded-[2rem] lg:border-b lg:origin-bottom-right", // Desktop
           isOpen 
             ? "translate-y-0 opacity-100 h-[85vh] lg:h-[650px] lg:max-h-[85vh] lg:translate-x-0" 
             : "translate-y-full opacity-0 pointer-events-none lg:translate-y-12 lg:translate-x-4 lg:scale-95"
