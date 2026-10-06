@@ -122,6 +122,18 @@ function photoNumber(value: number | string | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+/** One parsed intake draft flattened into the photo review table's row shape. */
+function draftToPhotoRow(draft: IntakeDraft): PhotoRow {
+  return {
+    name: draft.nameEn || draft.nameSw || "",
+    category: draft.categoryName || "",
+    unit: draft.unit || "",
+    buyingPrice: draft.buyingPrice ?? "",
+    sellingPrice: draft.sellingPrice ?? "",
+    quantity: draft.quantity ?? "",
+  };
+}
+
 function rowTone(score: number) {
   if (score < 0.5) return "bg-red-50/70 hover:bg-red-50 dark:bg-red-950/30 dark:hover:bg-red-950/50";
   if (score < CONFIDENCE_THRESHOLD) return "bg-amber-50/70 hover:bg-amber-50 dark:bg-amber-950/30 dark:hover:bg-amber-950/50";
@@ -146,15 +158,8 @@ interface ScanToIntakeDialogProps {
    */
   categoryGroups?: CategoryNode[];
   /**
-   * Add Product handoff: instead of the review table + batch apply, the parsed
-   * drafts are handed to the caller so the product form can be pre-filled for
-   * review (first draft fills the form, the rest queue behind it).
-   */
-  onParsed?: (drafts: IntakeDraft[]) => void;
-  /**
-   * Product-photo method: the AI identifies every distinct product in a
-   * captured or uploaded photo; the rows land in the editable review table
-   * below the method cards until the merchant applies them to the form.
+   * Add Product handoff for a single product QR (barcode number, URL, plain
+   * name): the recognized product fills the product form directly.
    */
   onProductDetected?: (details: ProductDetails[], image: string) => void;
   /**
@@ -179,6 +184,7 @@ const CategoryCellPicker: React.FC<{
   groups: CategoryNode[];
   onSelect: (name: string) => void;
 }> = ({ value, placeholder, groups, onSelect }) => {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -196,9 +202,9 @@ const CategoryCellPicker: React.FC<{
       </PopoverTrigger>
       <PopoverContent className="w-[280px] p-0" align="start">
         <Command>
-          <CommandInput placeholder="Search categories..." />
+          <CommandInput placeholder={t("intake.searchCategories")} />
           <CommandList>
-            <CommandEmpty>No categories found.</CommandEmpty>
+            <CommandEmpty>{t("intake.noCategories")}</CommandEmpty>
             {groups.map((group) => (
               <CommandGroup key={group.id} heading={group.name}>
                 {(group.children ?? []).map((cat) => (
@@ -296,7 +302,7 @@ const PhotoRowEditor: React.FC<{
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-1">
-          <Label className="text-xs">SKU</Label>
+          <Label className="text-xs">{t("products.sku")}</Label>
           <Input
             className="h-8"
             value={row.sku ?? ""}
@@ -308,14 +314,14 @@ const PhotoRowEditor: React.FC<{
           <Input
             className="h-8"
             value={row.storeLocation ?? ""}
-            placeholder="Mfano: Aisle 4, Side B"
+            placeholder={t("intake.locationPlaceholder")}
             onChange={(e) => editPhotoRow(index, { storeLocation: e.target.value })}
           />
         </div>
       </div>
       <div className="space-y-2">
         <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-          Tiers &amp; Wholesale Pricing
+          {t("intake.priceTiers")}
         </p>
         {(row.prices ?? []).map((pRecord, pIdx) => (
           <div key={pIdx} className="flex items-center gap-2 rounded-xl border border-border/50 bg-background p-2">
@@ -327,9 +333,9 @@ const PhotoRowEditor: React.FC<{
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="wholesale">Wholesale</SelectItem>
-                <SelectItem value="corporate">Corporate</SelectItem>
-                <SelectItem value="promotional">Promo</SelectItem>
+                <SelectItem value="wholesale">{t("intake.tierWholesale")}</SelectItem>
+                <SelectItem value="corporate">{t("intake.tierCorporate")}</SelectItem>
+                <SelectItem value="promotional">{t("intake.tierPromo")}</SelectItem>
               </SelectContent>
             </Select>
             <Input
@@ -339,7 +345,7 @@ const PhotoRowEditor: React.FC<{
               step="any"
               value={pRecord.price}
               onChange={(e) => editPhotoPrice(index, pIdx, { price: e.target.value })}
-              placeholder="Price"
+              placeholder={t("intake.pricePlaceholder")}
             />
             <Button
               type="button"
@@ -364,14 +370,14 @@ const PhotoRowEditor: React.FC<{
       </div>
       <div className="space-y-2 rounded-xl border bg-background/60 p-3">
         <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-          Usambazaji
+          {t("intake.distribution")}
         </p>
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-background p-2">
           <div className="flex items-center gap-2">
             <Store className="h-4 w-4 shrink-0 text-primary" />
             <div className="space-y-0.5">
-              <Label className="text-xs font-bold leading-none">Twende duka marketplace</Label>
-              <p className="text-[10px] text-muted-foreground">Onyesha bidhaa mtandaoni</p>
+              <Label className="text-xs font-bold leading-none">{t("intake.publishDirectoryTitle")}</Label>
+              <p className="text-[10px] text-muted-foreground">{t("intake.publishDirectoryDesc")}</p>
             </div>
           </div>
           <Switch
@@ -383,8 +389,8 @@ const PhotoRowEditor: React.FC<{
           <div className="flex items-center gap-2">
             <Package className="h-4 w-4 shrink-0 text-primary" />
             <div className="space-y-0.5">
-              <Label className="text-xs font-bold leading-none">Tulete App</Label>
-              <p className="text-[10px] text-muted-foreground">Inaweza kuagizwa mtandaoni</p>
+              <Label className="text-xs font-bold leading-none">{t("intake.publishDeliveryTitle")}</Label>
+              <p className="text-[10px] text-muted-foreground">{t("intake.publishDeliveryDesc")}</p>
             </div>
           </div>
           <Switch
@@ -396,8 +402,8 @@ const PhotoRowEditor: React.FC<{
           <div className="flex items-center gap-2">
             <Facebook className="h-4 w-4 shrink-0 text-[#1877F2]" />
             <div className="space-y-0.5">
-              <Label className="text-xs font-bold leading-none text-[#1877F2]">Facebook &amp; Instagram</Label>
-              <p className="text-[10px] text-muted-foreground">Post mtandaoni ukisave</p>
+              <Label className="text-xs font-bold leading-none text-[#1877F2]">{t("intake.publishFacebookTitle")}</Label>
+              <p className="text-[10px] text-muted-foreground">{t("intake.publishFacebookDesc")}</p>
             </div>
           </div>
           <Switch
@@ -443,7 +449,7 @@ const PhotoRowEditor: React.FC<{
  * multi-item QR layouts go through the AI intake staging area. Nothing touches
  * the catalogue until the merchant reviews and saves.
  */
-export const ScanToIntakeDialog: React.FC<ScanToIntakeDialogProps> = ({ isOpen, onClose, shopId, categoryGroups, onParsed, onProductDetected, onSubmitProducts, fbConnected }) => {
+export const ScanToIntakeDialog: React.FC<ScanToIntakeDialogProps> = ({ isOpen, onClose, shopId, categoryGroups, onProductDetected, onSubmitProducts, fbConnected }) => {
   const { t } = useI18n();
   const createBatch = useCreateIntakeBatch(shopId);
   const [batchId, setBatchId] = useState<string | null>(null);
@@ -469,14 +475,21 @@ export const ScanToIntakeDialog: React.FC<ScanToIntakeDialogProps> = ({ isOpen, 
   const handoffRef = useRef(false);
 
   useEffect(() => {
-    if (!onParsed || batch?.status !== "completed" || handoffRef.current) return;
+    if (batch?.status !== "completed" || handoffRef.current) return;
+    if (!onSubmitProducts) return;
     handoffRef.current = true;
     const drafts = batch.drafts;
     setBatchId(null);
     createBatch.reset();
-    onClose();
-    onParsed(drafts);
-  }, [batch, onParsed, onClose, createBatch]);
+    if (drafts.length === 0) {
+      toast.error(t("products.aiDetectedFail"));
+      return;
+    }
+    // Invoice/QR batches land in the same editable preview table the photo
+    // scans use, so every method is reviewed and submitted in one place.
+    setPhotoRows((prev) => [...prev, ...drafts.map(draftToPhotoRow)]);
+    toast.success(t("products.aiDetectedMany").replace("{n}", String(drafts.length)));
+  }, [batch, onSubmitProducts, createBatch, t]);
 
   const sourcesCount = qrPayloads.length + images.length;
   const parsing = createBatch.isPending;
@@ -787,14 +800,15 @@ export const ScanToIntakeDialog: React.FC<ScanToIntakeDialogProps> = ({ isOpen, 
   };
 
   const handlePhotoUpload = async (files: FileList | null) => {
-    const file = files?.[0];
-    if (!file) return;
-    try {
-      const dataUrl = await fileToDataUrl(file);
-      await detectProductFromImage(dataUrl);
-    } catch (err) {
-      console.error("Product photo read failed:", err);
-      toast.error(t("intake.photoFailed"));
+    if (!files || files.length === 0) return;
+    for (const file of Array.from(files)) {
+      try {
+        const dataUrl = await fileToDataUrl(file);
+        await detectProductFromImage(dataUrl);
+      } catch (err) {
+        console.error("Product photo read failed:", err);
+        toast.error(t("intake.photoFailed"));
+      }
     }
   };
 
@@ -846,6 +860,7 @@ export const ScanToIntakeDialog: React.FC<ScanToIntakeDialogProps> = ({ isOpen, 
                 ref={photoUploadRef}
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
                 onChange={(e) => {
                   handlePhotoUpload(e.target.files);
@@ -1124,7 +1139,7 @@ export const ScanToIntakeDialog: React.FC<ScanToIntakeDialogProps> = ({ isOpen, 
                           <TableHead>{t("products.name")}</TableHead>
                           <TableHead>{t("intake.colCategory")}</TableHead>
                           <TableHead>{t("products.brand")}</TableHead>
-                          <TableHead>Barcode</TableHead>
+                          <TableHead>{t("products.barcode")}</TableHead>
                           <TableHead>{t("intake.colUnit")}</TableHead>
                           <TableHead>{t("intake.colBuy")}</TableHead>
                           <TableHead>{t("intake.colSell")}</TableHead>
@@ -1280,7 +1295,7 @@ export const ScanToIntakeDialog: React.FC<ScanToIntakeDialogProps> = ({ isOpen, 
 
           {reviewStage && (
             <div className="space-y-3">
-              {(!batch || batch.status === "pending" || batch.status === "processing" || (batch.status === "completed" && onParsed)) && (
+              {(!batch || batch.status === "pending" || batch.status === "processing" || (batch.status === "completed" && onSubmitProducts)) && (
                 <div className="flex flex-col items-center justify-center gap-3 py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <p className="text-sm font-medium">{t("intake.processing")}</p>
@@ -1309,7 +1324,7 @@ export const ScanToIntakeDialog: React.FC<ScanToIntakeDialogProps> = ({ isOpen, 
                 </div>
               )}
 
-              {((batch?.status === "completed" && !onParsed) || batch?.status === "applied") && batch && (
+              {((batch?.status === "completed" && !onSubmitProducts) || batch?.status === "applied") && batch && (
                 <>
                   {batch.status === "applied" && (
                     <p className="text-xs text-muted-foreground">{t("intake.readOnlyApplied")}</p>

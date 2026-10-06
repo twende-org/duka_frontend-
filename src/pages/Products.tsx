@@ -44,7 +44,7 @@ import { ErrorAlert } from "@/components/ErrorAlert";
 import { formatTZS } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { IntakeDraft, Product } from "@/types";
+import type { Product } from "@/types";
 import type { ProductDetails } from "@/lib/api/domains/ai";
 import PageHeader from "@/components/common/PageHeader";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -124,7 +124,6 @@ export default function Products() {
   const [fbConnected, setFbConnected] = useState<boolean | null>(null);
   const [ttConnected, setTtConnected] = useState<boolean | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
-  const [parsedQueue, setParsedQueue] = useState<IntakeDraft[]>([]);
   const [detailsQueue, setDetailsQueue] = useState<ProductDetails[]>([]);
   const [scanFilled, setScanFilled] = useState(false);
 
@@ -293,23 +292,6 @@ export default function Products() {
     setShowAdvanced(false);
     setScanFilled(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const populateFormFromDraft = (draft: IntakeDraft) => {
-    const treeMatches = shopCategoryTree.flatMap((g) => g.children || []);
-    const matchedId = matchCategoryByName(draft.categoryName, treeMatches);
-    const unitMatch = matchUnitByName(draft.unit);
-    setEditingProduct(null);
-    setForm((f) => ({
-      ...f,
-      name: draft.nameEn || f.name,
-      categories: matchedId ? [matchedId] : f.categories,
-      buyingPrice: draft.buyingPrice ? String(draft.buyingPrice) : f.buyingPrice,
-      sellingPrice: draft.sellingPrice ? String(draft.sellingPrice) : f.sellingPrice,
-      unit: unitMatch || "pcs",
-      initialStock: draft.quantity ? String(draft.quantity) : f.initialStock,
-    }));
-    setScanFilled(true);
   };
 
   const applyDetailsToForm = (details: ProductDetails, image?: string) => {
@@ -531,14 +513,6 @@ export default function Products() {
         logActivity({ action: "product_created", category: "product", details: `${productData.name}`, metadata: { name: productData.name } });
         toast.success(t("products.added"));
       }
-      if (!editingProduct && parsedQueue.length > 0) {
-        const [head, ...rest] = parsedQueue;
-        resetForm();
-        setParsedQueue(rest);
-        populateFormFromDraft(head);
-        setProgress(0);
-        return;
-      }
       if (!editingProduct && detailsQueue.length > 0) {
         const [head, ...rest] = detailsQueue;
         resetForm();
@@ -599,7 +573,6 @@ export default function Products() {
 
   const handleEdit = (prod: Product) => {
     setEditingProduct(prod);
-    setParsedQueue([]);
     setDetailsQueue([]);
     setForm({
       name: prod.name, categories: prod.categories || [], buyingPrice: String(prod.buyingPrice || ""), sellingPrice: String(prod.sellingPrice || ""),
@@ -660,7 +633,6 @@ export default function Products() {
                 if (!v) {
                   setEditingProduct(null);
                   resetForm();
-                  setParsedQueue([]);
                   setDetailsQueue([]);
                   setProgress(0);
                   setSubmitting(false); // Ensure submitting is reset if closed manually
@@ -696,12 +668,6 @@ export default function Products() {
                   shopId={currentShopId}
                   categoryGroups={shopCategoryTree}
                   fbConnected={fbConnected}
-                  onParsed={(drafts) => {
-                    setScanOpen(false);
-                    if (drafts.length === 0) return;
-                    setParsedQueue(drafts.slice(1));
-                    populateFormFromDraft(drafts[0]);
-                  }}
                   onSubmitProducts={handleSubmitPhotoRows}
                   onProductDetected={(detected, image) => {
                     const [head, ...rest] = detected;
@@ -715,9 +681,9 @@ export default function Products() {
                     <div className="flex shrink-0 items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
                       <ScanLine className="h-4 w-4 shrink-0 text-primary" />
                       <span className="flex-1">{t("products.filledFromScan")}</span>
-                      {parsedQueue.length + detailsQueue.length > 0 && (
+                      {detailsQueue.length > 0 && (
                         <Badge variant="outline" className="shrink-0">
-                          {t("products.scanQueue").replace("{n}", String(parsedQueue.length + detailsQueue.length))}
+                          {t("products.scanQueue").replace("{n}", String(detailsQueue.length))}
                         </Badge>
                       )}
                     </div>
