@@ -115,7 +115,31 @@ export default function AuthShowcaseShell({ title, subtitle, children }: AuthSho
           </div>
 
           <p className="mt-10 text-center text-xs leading-relaxed text-muted-foreground">
-            {sw ? "Kwa kuendelea, unakubali masharti na sera ya faragha ya Twende Duka." : "By continuing, you agree to Twende Duka's terms and privacy policy."}
+            {sw ? (
+              <>
+                Kwa kuendelea, unakubali{" "}
+                <Link to="/terms" className="font-medium text-primary hover:underline">
+                  masharti
+                </Link>{" "}
+                na{" "}
+                <Link to="/privacy" className="font-medium text-primary hover:underline">
+                  sera ya faragha
+                </Link>{" "}
+                ya Twende Duka.
+              </>
+            ) : (
+              <>
+                By continuing, you agree to Twende Duka's{" "}
+                <Link to="/terms" className="font-medium text-primary hover:underline">
+                  terms
+                </Link>{" "}
+                and{" "}
+                <Link to="/privacy" className="font-medium text-primary hover:underline">
+                  privacy policy
+                </Link>
+                .
+              </>
+            )}
           </p>
         </div>
       </motion.section>

@@ -62,6 +62,22 @@ const routes = [
     keywords:    'twende duka, twendeduka, smart shop management, shop management system, inventory system tanzania, mfumo wa duka, biashara software',
     canonical:   'https://duka.twendedigital.tech/twende-duka',
   },
+  {
+    route:       'privacy',
+    title:       'Privacy Policy — Twende Duka',
+    description: 'How Twende Duka collects, uses and protects your data, including Facebook and TikTok integrations. English and Kiswahili.',
+    ogTitle:     'Privacy Policy — Twende Duka',
+    keywords:    'twende duka privacy policy, sera ya faragha, data protection tanzania',
+    canonical:   'https://duka.twendedigital.tech/privacy',
+  },
+  {
+    route:       'terms',
+    title:       'Terms of Service — Twende Duka',
+    description: 'The terms that govern the use of Twende Duka: shop management, marketplace and social media integrations. English and Kiswahili.',
+    ogTitle:     'Terms of Service — Twende Duka',
+    keywords:    'twende duka terms of service, masharti ya huduma, terms and conditions tanzania',
+    canonical:   'https://duka.twendedigital.tech/terms',
+  },
 ];
 
 /**

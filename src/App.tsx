@@ -44,6 +44,8 @@ const DukaPosSystem = lazy(() => import("@/pages/seo/DukaPosSystem"));
 const TwendeDigital = lazy(() => import("@/pages/seo/TwendeDigital"));
 const TwendeDuka = lazy(() => import("@/pages/seo/TwendeDuka"));
 const PublicWholesaleDirectory = lazy(() => import("@/pages/PublicWholesaleDirectory"));
+const Privacy = lazy(() => import("@/pages/Privacy"));
+const Terms = lazy(() => import("@/pages/Terms"));
 
 // Shop directory (lazy)
 const ShopDirectory = lazy(() => import("@/pages/ShopDirectory"));
@@ -191,6 +193,8 @@ const App = () => (
                     <Route path="/" element={<ShopDirectory />} />
                     <Route path="/explore" element={<PlatformVision />} />
                     <Route path="/wholesale" element={<PublicWholesaleDirectory />} />
+                    <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/terms" element={<Terms />} />
                     
                     {/* Legacy /nyumbani -> root */}
                     <Route path="/nyumbani" element={<Navigate to="/" replace />} />
