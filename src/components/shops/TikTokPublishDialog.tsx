@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Share2, CheckCircle2, XCircle, Video, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, Share2, CheckCircle2, XCircle, Video, Image as ImageIcon, AlertCircle, RefreshCw } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -64,6 +64,7 @@ export default function TikTokPublishDialog({
   open, onOpenChange, product, shopId, initialCaption, onPublished,
 }: TikTokPublishDialogProps) {
   const [caption, setCaption] = useState("");
+  const [postFormat, setPostFormat] = useState<"reel" | "photo">("reel");
   const [privacy, setPrivacy] = useState<PrivacyChoice | "">("");
   const [allowComments, setAllowComments] = useState(false);
   const [allowDuet, setAllowDuet] = useState(false);
@@ -113,6 +114,7 @@ export default function TikTokPublishDialog({
       initialCaption?.trim() ||
         (product?.description ? `${product.name}\n\n${product.description}` : product?.name || ""),
     );
+    setPostFormat("reel");
     setPrivacy("");
     setAllowComments(false);
     setAllowDuet(false);
@@ -135,7 +137,7 @@ export default function TikTokPublishDialog({
 
   const videoSeconds = estimateVideoSeconds(imageCount || 1);
   const maxSeconds = creatorInfo?.maxVideoPostDurationSec || 0;
-  const tooLong = maxSeconds > 0 && videoSeconds > maxSeconds;
+  const tooLong = postFormat === "reel" && maxSeconds > 0 && videoSeconds > maxSeconds;
   const commercialDisclosed = commercialOn && (ownBrand || brandedContent);
 
   const canPublish = Boolean(
@@ -147,6 +149,7 @@ export default function TikTokPublishDialog({
     setPublishing(true);
     try {
       await postProductToTikTok(shopId, product.id, caption.trim() || undefined, {
+        postFormat,
         privacyLevel: privacy,
         disableComment: !allowComments,
         disableDuet: !allowDuet,
@@ -209,7 +212,7 @@ export default function TikTokPublishDialog({
                 <p className="font-semibold text-green-800 dark:text-green-300">Submission received</p>
                 <p className="text-green-700 dark:text-green-400">
                   <span className="font-medium">{product.name}</span> was sent to TikTok for{" "}
-                  <span className="font-medium">{privacyLabel}</span>. The video may take a few minutes to
+                  <span className="font-medium">{privacyLabel}</span>. The {postFormat === "reel" ? "video" : "photos"} may take a few minutes to
                   process before it appears on your profile.
                 </p>
               </div>
@@ -282,8 +285,40 @@ export default function TikTokPublishDialog({
                 <p className="font-semibold truncate">{product.name}</p>
                 <p className="text-sm text-muted-foreground">{formatTZS(product.sellingPrice)}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Your photos become a ~{videoSeconds}s video. You can edit everything below before it goes out.
+                  {postFormat === "reel"
+                    ? `Your photos become a ~${videoSeconds}s video. You can edit everything below before it goes out.`
+                    : `Your photos will be posted as a carousel. You can edit everything below before it goes out.`}
                 </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Post format</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPostFormat("reel")}
+                  className={`flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                    postFormat === "reel"
+                      ? "border-black bg-black text-white"
+                      : "border-input bg-background hover:bg-muted"
+                  }`}
+                >
+                  <Video className="h-4 w-4" />
+                  Video reel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPostFormat("photo")}
+                  className={`flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                    postFormat === "photo"
+                      ? "border-black bg-black text-white"
+                      : "border-input bg-background hover:bg-muted"
+                  }`}
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Photo carousel
+                </button>
               </div>
             </div>
 
@@ -310,7 +345,7 @@ export default function TikTokPublishDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tiktok-privacy">Who can watch this video?</Label>
+              <Label htmlFor="tiktok-privacy">Who can see this post?</Label>
               <Select value={privacy} onValueChange={(value) => setPrivacy(value as PrivacyChoice)}>
                 <SelectTrigger id="tiktok-privacy">
                   <SelectValue placeholder="Choose who can watch" />

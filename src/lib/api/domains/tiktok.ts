@@ -190,6 +190,7 @@ export interface TikTokPostResult {
  * receives (Content Sharing Guidelines forbid the client presetting these).
  */
 export interface TikTokPostOptions {
+  postFormat?: "reel" | "photo";
   privacyLevel?: "PUBLIC_TO_EVERYONE" | "MUTUAL_FOLLOW_FRIENDS" | "SELF_ONLY";
   disableComment?: boolean;
   disableDuet?: boolean;
@@ -215,6 +216,7 @@ export async function postProductToTikTok(
       shopId,
       productId,
       ...(message === undefined ? {} : { message }),
+      ...(options?.postFormat ? { postFormat: options.postFormat } : {}),
       ...(options?.privacyLevel ? { privacyLevel: options.privacyLevel } : {}),
       ...(options?.disableComment === undefined ? {} : { disableComment: options.disableComment }),
       ...(options?.disableDuet === undefined ? {} : { disableDuet: options.disableDuet }),
