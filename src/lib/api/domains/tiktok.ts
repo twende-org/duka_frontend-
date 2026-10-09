@@ -153,10 +153,17 @@ export function toTikTokCreatorInfo(raw: unknown): TikTokCreatorInfo {
  *  the caller should stop and offer "try again later" instead of letting the
  *  user configure a post that cannot be published. */
 export async function fetchTikTokCreatorInfo(shopId: string): Promise<TikTokCreatorInfo> {
-  const body = await getApiClient().get<unknown>(TIKTOK_CREATOR_INFO_PATH, {
-    query: { shopId },
-  });
-  return toTikTokCreatorInfo(body);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  try {
+    const body = await getApiClient().get<unknown>(TIKTOK_CREATOR_INFO_PATH, {
+      query: { shopId },
+      signal: controller.signal,
+    });
+    return toTikTokCreatorInfo(body);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /** Mirror of `saveTikTokConnection({shopId, sessionId})`. */
@@ -201,19 +208,25 @@ export async function postProductToTikTok(
   message?: string,
   options?: TikTokPostOptions
 ): Promise<TikTokPostResult> {
-  const body = await getApiClient().post<unknown>(TIKTOK_POSTS_PATH, {
-    shopId,
-    productId,
-    ...(message === undefined ? {} : { message }),
-    ...(options?.privacyLevel ? { privacyLevel: options.privacyLevel } : {}),
-    ...(options?.disableComment === undefined ? {} : { disableComment: options.disableComment }),
-    ...(options?.disableDuet === undefined ? {} : { disableDuet: options.disableDuet }),
-    ...(options?.disableStitch === undefined ? {} : { disableStitch: options.disableStitch }),
-    ...(options?.brandContent === undefined ? {} : { brandContent: options.brandContent }),
-    ...(options?.brandOrganic === undefined ? {} : { brandOrganic: options.brandOrganic }),
-  });
-  const row = isRecord(body) ? body : {};
-  return { success: row.success === true, publishId: optionalString(row.publishId) };
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  try {
+    const body = await getApiClient().post<unknown>(TIKTOK_POSTS_PATH, {
+      shopId,
+      productId,
+      ...(message === undefined ? {} : { message }),
+      ...(options?.privacyLevel ? { privacyLevel: options.privacyLevel } : {}),
+      ...(options?.disableComment === undefined ? {} : { disableComment: options.disableComment }),
+      ...(options?.disableDuet === undefined ? {} : { disableDuet: options.disableDuet }),
+      ...(options?.disableStitch === undefined ? {} : { disableStitch: options.disableStitch }),
+      ...(options?.brandContent === undefined ? {} : { brandContent: options.brandContent }),
+      ...(options?.brandOrganic === undefined ? {} : { brandOrganic: options.brandOrganic }),
+    }, { signal: controller.signal });
+    const row = isRecord(body) ? body : {};
+    return { success: row.success === true, publishId: optionalString(row.publishId) };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**
