@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Share2, CheckCircle2, XCircle, Video, Image as ImageIcon, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, Share2, CheckCircle2, XCircle, Video, Image as ImageIcon, AlertCircle, RefreshCw, Info } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -225,21 +225,39 @@ export default function TikTokPublishDialog({
 
         {result === "failure" && (
           <div className="space-y-4 py-2">
-            <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 dark:border-red-900 p-3">
-              <XCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <p className="font-semibold text-red-800 dark:text-red-300">TikTok rejected the post</p>
-                <p className="text-red-700 dark:text-red-400 break-words">{failureMessage}</p>
+            {/unaudited_client|private_accounts/.test(failureMessage) ? (
+              <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/40 dark:border-blue-900 p-3">
+                <Info className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-semibold text-blue-800 dark:text-blue-300">TikTok inahitaji kukagua app yako</p>
+                  <p className="text-blue-700 dark:text-blue-400 mt-1">
+                    Kabla ya kuchapisha, TikTok inahitaji kukagua app hili kwa mara moja. Hii ni hatua ya kawaida —
+                    nenda <span className="font-medium">TikTok Developer Portal → app yako → Submit for Review</span>.
+                  </p>
+                  <p className="text-blue-700 dark:text-blue-400 mt-2">
+                    Kwa sasa unaweza <span className="font-medium">kuchapisha na kutumia tangazo</span> kwa njia nyingine — copy text au share to WhatsApp.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 dark:border-red-900 p-3">
+                <XCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-semibold text-red-800 dark:text-red-300">TikTok rejected the post</p>
+                  <p className="text-red-700 dark:text-red-400 break-words">{failureMessage}</p>
+                </div>
+              </div>
+            )}
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Close</Button>
-              <Button
-                className="flex-1 bg-black text-white hover:bg-black/90"
-                onClick={() => { setResult(null); }}
-              >
-                Try again
-              </Button>
+              {!/unaudited_client|private_accounts/.test(failureMessage) && (
+                <Button
+                  className="flex-1 bg-black text-white hover:bg-black/90"
+                  onClick={() => { setResult(null); }}
+                >
+                  Try again
+                </Button>
+              )}
             </div>
           </div>
         )}

@@ -25,6 +25,12 @@ import {
   Send,
   CheckCircle2,
   ArrowRight,
+  Image as ImageIcon,
+  Heart,
+  Music,
+  Phone,
+  Info,
+  Eye,
 } from "lucide-react";
 import { BsWhatsapp } from "react-icons/bs";
 import { motion, AnimatePresence } from "framer-motion";
@@ -95,8 +101,9 @@ export default function AIAdGeneratorDialog({
   onApply,
 }: AIAdGeneratorDialogProps) {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState(1); // 1: Input, 2: Generation/Result
-  const [platform, setPlatform] = useState("facebook");
+  const [step, setStep] = useState(1);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["facebook"]);
+  const [postFormat, setPostFormat] = useState<"photo" | "reel">("photo");
   const [tone, setTone] = useState("professional");
   const [targetAudience, setTargetAudience] = useState("");
   const [loading, setLoading] = useState(false);
@@ -108,6 +115,7 @@ export default function AIAdGeneratorDialog({
   const [fbConnected, setFbConnected] = useState(false);
   const [publishTikTokOpen, setPublishTikTokOpen] = useState(false);
   const [fbConfirmOpen, setFbConfirmOpen] = useState(false);
+  const [fbConfirmPlatform, setFbConfirmPlatform] = useState<"facebook" | "instagram">("facebook");
   const [posting, setPosting] = useState(false);
 
   useEffect(() => {
@@ -126,6 +134,12 @@ export default function AIAdGeneratorDialog({
     };
   }, [open, shop.id]);
 
+  const togglePlatform = (id: string) => {
+    setSelectedPlatforms((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
+    );
+  };
+
   const handleGenerate = async () => {
     setLoading(true);
     setStep(2);
@@ -138,8 +152,14 @@ export default function AIAdGeneratorDialog({
         ? "Mpya au Mtumba"
         : "MPYA (brand new)";
 
+    const platformList = selectedPlatforms.map((p) => p.toUpperCase()).join(", ");
+    const formatLabel = postFormat === "reel"
+      ? "Video reel (short, punchy, energetic copy)"
+      : "Photo carousel (descriptive, benefit-focused copy)";
+
     const prompt = `Wewe ni mtaalamu wa masoko ya kidijitali anayebobea katika soko la Afrika Mashariki na kimataifa.
-Tengeneza matoleo ya matangazo ya bidhaa hii kwa ajili ya jukwaa la ${platform.toUpperCase()}.
+Tengeneza matoleo ya matangazo ya bidhaa hii kwa ajili ya majukwaa: ${platformList}.
+Format: ${formatLabel}.
 Tumia toni ya ${tone.toUpperCase()}.
 ${targetAudience ? `Walengwa ni: ${targetAudience}` : ""}
 
@@ -162,7 +182,7 @@ TOA MATOKEO KATIKA MFUMO WA JSON PEKEE wenye funguo hizi:
 - whatsapp_version: Toleo fupi lililoboreshwa kwa ajili ya hali ya WhatsApp (Status) - MUHIMU SANA: lazima lijumuishe namba ${shop.phone || ""}
 - short_version: Toleo fupi sana la kuvutia (kama kwa TikTok au SMS) - MUHIMU SANA: lazima lijumuishe namba ${shop.phone || ""}
 
-Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${platform}. Jibu kwa JSON pekee bila maelezo ya ziada.`;
+Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa kila jukwaa. Jibu kwa JSON pekee bila maelezo ya ziada.`;
 
     try {
       let content = await generateAICopy(prompt);
@@ -221,16 +241,16 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
     try {
       const message = [ad.caption, ad.hashtags].filter(Boolean).join("\n\n");
       const result = await postProductToFacebook(shop.id, product.id, true, message);
-      if (platform === "instagram" && !result.instagramPostId) {
+      if (fbConfirmPlatform === "instagram" && !result.instagramPostId) {
         toast.info("Imechapishwa kwenye Facebook — Instagram haijaunganishwa na ukurasa wako.");
-      } else if (platform === "instagram") {
+      } else if (fbConfirmPlatform === "instagram") {
         toast.success("Imechapishwa kwenye Instagram!");
       } else {
         toast.success("Imechapishwa kwenye Facebook!");
       }
       setFbConfirmOpen(false);
     } catch {
-      toast.error(platform === "instagram" ? "Imeshindwa kuchapisha Instagram." : "Imeshindwa kuchapisha Facebook.");
+      toast.error(fbConfirmPlatform === "instagram" ? "Imeshindwa kuchapisha Instagram." : "Imeshindwa kuchapisha Facebook.");
     } finally {
       setPosting(false);
     }
@@ -313,27 +333,77 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
                   {/* Platform Selection */}
                   <div className="space-y-3">
                     <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                      <Share2 className="h-3 w-3" /> Select Platform
+                      <Share2 className="h-3 w-3" /> Select Platforms
+                      <Badge variant="secondary" className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0 ml-auto">Multiple</Badge>
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {platforms.map((p) => (
-                        <button
-                          key={p.id}
-                          onClick={() => setPlatform(p.id)}
-                          className={`flex flex-col items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-2xl border-2 transition-all group ${
-                            platform === p.id 
-                              ? "border-primary bg-primary/5 shadow-md shadow-primary/5" 
-                              : "border-border bg-card hover:border-primary/30"
-                          }`}
-                        >
-                          <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-xl flex items-center justify-center text-white shadow-lg ${p.color} transition-transform group-hover:scale-110`}>
-                            <p.icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                          </div>
-                          <span className={`text-[10px] font-black uppercase tracking-wider ${platform === p.id ? "text-primary" : "text-muted-foreground"}`}>
-                            {p.name}
-                          </span>
-                        </button>
-                      ))}
+                      {platforms.map((p) => {
+                        const selected = selectedPlatforms.includes(p.id);
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => togglePlatform(p.id)}
+                            className={`relative flex flex-col items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-2xl border-2 transition-all group ${
+                              selected
+                                ? "border-primary bg-primary/5 shadow-md shadow-primary/5"
+                                : "border-border bg-card hover:border-primary/30"
+                            }`}
+                          >
+                            {selected && (
+                              <div className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-primary flex items-center justify-center shadow-sm">
+                                <Check className="h-3 w-3 text-primary-foreground" />
+                              </div>
+                            )}
+                            <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-xl flex items-center justify-center text-white shadow-lg ${p.color} transition-transform group-hover:scale-110`}>
+                              <p.icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                            </div>
+                            <span className={`text-[10px] font-black uppercase tracking-wider ${selected ? "text-primary" : "text-muted-foreground"}`}>
+                              {p.name}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Format Selection */}
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                      <ImageIcon className="h-3 w-3" /> Post Format
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setPostFormat("photo")}
+                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                          postFormat === "photo"
+                            ? "border-primary bg-primary/5 shadow-md shadow-primary/5"
+                            : "border-border bg-card hover:border-primary/30"
+                        }`}
+                      >
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${postFormat === "photo" ? "text-primary bg-primary/10" : "text-muted-foreground bg-muted"}`}>
+                          <ImageIcon className="h-4 w-4" />
+                        </div>
+                        <div className="text-left">
+                          <span className={`text-[10px] font-black uppercase tracking-wider block ${postFormat === "photo" ? "text-primary" : "text-muted-foreground"}`}>Photo Carousel</span>
+                          <span className="text-[8px] text-muted-foreground font-medium">Swipe images</span>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setPostFormat("reel")}
+                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                          postFormat === "reel"
+                            ? "border-primary bg-primary/5 shadow-md shadow-primary/5"
+                            : "border-border bg-card hover:border-primary/30"
+                        }`}
+                      >
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${postFormat === "reel" ? "text-primary bg-primary/10" : "text-muted-foreground bg-muted"}`}>
+                          <Video className="h-4 w-4" />
+                        </div>
+                        <div className="text-left">
+                          <span className={`text-[10px] font-black uppercase tracking-wider block ${postFormat === "reel" ? "text-primary" : "text-muted-foreground"}`}>Video Reel</span>
+                          <span className="text-[8px] text-muted-foreground font-medium">Auto-generated video</span>
+                        </div>
+                      </button>
                     </div>
                   </div>
 
@@ -378,9 +448,10 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
                   </div>
                 </div>
 
-                <Button 
-                  onClick={handleGenerate} 
-                  className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest gap-3 shadow-xl shadow-primary/20"
+                <Button
+                  onClick={handleGenerate}
+                  disabled={selectedPlatforms.length === 0}
+                  className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest gap-3 shadow-xl shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Sparkles className="h-5 w-5" />
                   Generate Magic Ad
@@ -413,6 +484,35 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
                   </div>
                 ) : ad ? (
                   <div className="space-y-6">
+                    {/* Platform Previews */}
+                    <div className="space-y-3">
+                      <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <Eye className="h-3 w-3" /> Live Preview
+                      </label>
+                      <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory custom-scrollbar">
+                        {selectedPlatforms.includes("facebook") && (
+                          <div className="snap-start shrink-0 w-[260px]">
+                            <FacebookPreview ad={ad} product={product} shop={shop} />
+                          </div>
+                        )}
+                        {selectedPlatforms.includes("instagram") && (
+                          <div className="snap-start shrink-0 w-[260px]">
+                            <InstagramPreview ad={ad} product={product} shop={shop} />
+                          </div>
+                        )}
+                        {selectedPlatforms.includes("tiktok") && (
+                          <div className="snap-start shrink-0 w-[200px]">
+                            <TikTokPreview ad={ad} product={product} />
+                          </div>
+                        )}
+                        {selectedPlatforms.includes("whatsapp") && (
+                          <div className="snap-start shrink-0 w-[260px]">
+                            <WhatsAppPreview ad={ad} shop={shop} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     <Tabs defaultValue="caption" className="w-full">
                       <TabsList className="grid grid-cols-3 sm:grid-cols-6 h-auto p-1 bg-muted/30 rounded-2xl mb-6">
                         <TabsTrigger value="headline" className="rounded-xl py-2 text-[10px] font-black uppercase">Title</TabsTrigger>
@@ -484,7 +584,10 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
                     </Tabs>
 
                     <div className="space-y-3 pt-4 border-t border-border/50">
-                      {platform === "tiktok" && (ttConnected ? (
+                      <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <Send className="h-3 w-3" /> Publish
+                      </label>
+                      {selectedPlatforms.includes("tiktok") && (ttConnected ? (
                         <Button
                           onClick={() => setPublishTikTokOpen(true)}
                           className="w-full h-12 rounded-xl bg-black hover:bg-black/80 text-white font-black uppercase tracking-widest gap-2 shadow-lg"
@@ -500,29 +603,43 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
                           </p>
                         </div>
                       ))}
-                      {(platform === "facebook" || platform === "instagram") && (fbConnected ? (
+                      {selectedPlatforms.includes("facebook") && (fbConnected ? (
                         <Button
-                          onClick={() => setFbConfirmOpen(true)}
+                          onClick={() => { setFbConfirmPlatform("facebook"); setFbConfirmOpen(true); }}
                           className="w-full h-12 rounded-xl bg-[#1877F2] hover:bg-[#1877F2]/90 text-white font-black uppercase tracking-widest gap-2 shadow-lg shadow-blue-500/20"
                         >
-                          {platform === "instagram" ? <Instagram className="h-4 w-4" /> : <Facebook className="h-4 w-4" />}
-                          {platform === "instagram" ? "Post to Instagram" : "Post to Facebook"}
+                          <Facebook className="h-4 w-4" />
+                          Post to Facebook
                         </Button>
                       ) : (
                         <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
-                          {platform === "instagram"
-                            ? <Instagram className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                            : <Facebook className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />}
+                          <Facebook className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                           <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                            {platform === "instagram" ? "Instagram" : "Facebook"} haijaunganishwa. Nenda Social kuunganisha akaunti, kisha tuma moja kwa moja.
+                            Facebook haijaunganishwa. Nenda Social kuunganisha akaunti.
                           </p>
                         </div>
                       ))}
-                      {platform === "whatsapp" && (
+                      {selectedPlatforms.includes("instagram") && (fbConnected ? (
+                        <Button
+                          onClick={() => { setFbConfirmPlatform("instagram"); setFbConfirmOpen(true); }}
+                          className="w-full h-12 rounded-xl bg-gradient-to-r from-[#833AB4] via-[#E1306C] to-[#F77737] hover:opacity-90 text-white font-black uppercase tracking-widest gap-2 shadow-lg shadow-pink-500/20"
+                        >
+                          <Instagram className="h-4 w-4" />
+                          Post to Instagram
+                        </Button>
+                      ) : (
+                        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
+                          <Instagram className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                          <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                            Instagram haijaunganishwa. Nenda Social kuunganisha akaunti.
+                          </p>
+                        </div>
+                      ))}
+                      {selectedPlatforms.includes("whatsapp") && (
                         <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-muted/20 p-3">
                           <BsWhatsapp className="mt-0.5 h-4 w-4 shrink-0 text-[#25D366]" />
                           <p className="text-[11px] font-semibold text-muted-foreground">
-                            WhatsApp hutumia "Share to WhatsApp" hapa chini — unaweza kutuma tangazo bila kuunganisha akaunti.
+                            WhatsApp hutumia "Share to WhatsApp" hapa chini — hakuna akaunti inayohitajika.
                           </p>
                         </div>
                       )}
@@ -613,13 +730,13 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa jukwaa la ${pl
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              {platform === "instagram"
+              {fbConfirmPlatform === "instagram"
                 ? <Instagram className="h-5 w-5 text-[#E4405F]" />
                 : <Facebook className="h-5 w-5 text-[#1877F2]" />}
-              {platform === "instagram" ? "Post to Instagram?" : "Post to Facebook?"}
+              {fbConfirmPlatform === "instagram" ? "Post to Instagram?" : "Post to Facebook?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {platform === "instagram" ? (
+              {fbConfirmPlatform === "instagram" ? (
                 <>This will share <span className="font-bold">{product.name}</span> with the Instagram business account linked to your Facebook Page.</>
               ) : (
                 <>This will publish <span className="font-bold">{product.name}</span> to your connected Facebook Page.</>
@@ -701,5 +818,119 @@ function AdContentBlock({
         {content}
       </div>
     </motion.div>
+  );
+}
+
+function FacebookPreview({ ad, product, shop }: { ad: GeneratedAd; product: Product; shop: Shop }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm h-full flex flex-col">
+      <div className="flex items-center gap-2 px-3 py-2 border-b bg-[#1877F2]/5">
+        <div className="h-7 w-7 rounded-full bg-[#1877F2]/10 flex items-center justify-center">
+          <Facebook className="h-3.5 w-3.5 text-[#1877F2]" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] font-black truncate">{shop.name}</p>
+          <p className="text-[8px] text-muted-foreground">Sponsored</p>
+        </div>
+      </div>
+      <div className="h-32 bg-muted overflow-hidden">
+        <ProfessionalImage src={product.imageUrls?.[0] || product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+      </div>
+      <div className="p-3 flex-1 flex flex-col gap-1.5">
+        <p className="text-[10px] font-black leading-tight">{ad.headline}</p>
+        <p className="text-[9px] text-muted-foreground line-clamp-3 leading-relaxed">{ad.caption}</p>
+      </div>
+      <div className="px-3 py-2 border-t flex items-center justify-around">
+        <span className="flex items-center gap-1 text-[9px] text-muted-foreground"><Heart className="h-3 w-3" /> Like</span>
+        <span className="flex items-center gap-1 text-[9px] text-muted-foreground"><MessageCircle className="h-3 w-3" /> Comment</span>
+        <span className="flex items-center gap-1 text-[9px] text-muted-foreground"><Share2 className="h-3 w-3" /> Share</span>
+      </div>
+    </div>
+  );
+}
+
+function InstagramPreview({ ad, product, shop }: { ad: GeneratedAd; product: Product; shop: Shop }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm h-full flex flex-col">
+      <div className="flex items-center gap-2 px-3 py-2">
+        <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-[#F77737] via-[#E1306C] to-[#833AB4] p-[1.5px]">
+          <div className="h-full w-full rounded-full bg-card flex items-center justify-center">
+            <span className="text-[8px] font-black">{shop.name.charAt(0)}</span>
+          </div>
+        </div>
+        <p className="text-[10px] font-black truncate">{shop.name}</p>
+      </div>
+      <div className="h-32 bg-muted overflow-hidden">
+        <ProfessionalImage src={product.imageUrls?.[0] || product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+      </div>
+      <div className="px-3 pt-2 flex items-center gap-3">
+        <Heart className="h-4 w-4" />
+        <MessageCircle className="h-4 w-4" />
+        <Share2 className="h-4 w-4" />
+      </div>
+      <div className="p-3 flex-1">
+        <p className="text-[9px] leading-relaxed line-clamp-4">
+          <span className="font-black">{shop.name} </span>
+          {ad.caption}
+        </p>
+        <p className="text-[8px] text-[#00376B] mt-1 font-medium">{ad.hashtags}</p>
+      </div>
+    </div>
+  );
+}
+
+function TikTokPreview({ ad, product }: { ad: GeneratedAd; product: Product }) {
+  return (
+    <div className="rounded-2xl border border-border bg-black overflow-hidden shadow-sm h-full flex flex-col aspect-[9/16] relative">
+      <div className="absolute inset-0">
+        <ProfessionalImage src={product.imageUrls?.[0] || product.imageUrl} alt={product.name} className="h-full w-full object-cover opacity-80" />
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+      <div className="absolute right-2 bottom-16 flex flex-col gap-4 items-center">
+        <div className="flex flex-col items-center gap-0.5">
+          <Heart className="h-5 w-5 text-white" />
+          <span className="text-[7px] text-white font-bold">Like</span>
+        </div>
+        <div className="flex flex-col items-center gap-0.5">
+          <MessageCircle className="h-5 w-5 text-white" />
+          <span className="text-[7px] text-white font-bold">Comment</span>
+        </div>
+        <div className="flex flex-col items-center gap-0.5">
+          <Share2 className="h-5 w-5 text-white" />
+          <span className="text-[7px] text-white font-bold">Share</span>
+        </div>
+      </div>
+      <div className="absolute bottom-0 left-0 right-12 p-3">
+        <p className="text-[9px] text-white font-black leading-tight line-clamp-1">{ad.short_version?.split("\n")[0] || ad.headline}</p>
+        <p className="text-[8px] text-white/80 line-clamp-2 mt-1 leading-relaxed">{ad.short_version}</p>
+        <p className="text-[7px] text-white/60 mt-1">{ad.hashtags}</p>
+        <div className="flex items-center gap-1 mt-1.5">
+          <Music className="h-2.5 w-2.5 text-white/60" />
+          <span className="text-[7px] text-white/60">Original sound</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WhatsAppPreview({ ad, shop }: { ad: GeneratedAd; shop: Shop }) {
+  return (
+    <div className="rounded-2xl border border-border bg-[#ECE5DD] dark:bg-[#0B141A] overflow-hidden shadow-sm h-full flex flex-col">
+      <div className="flex items-center gap-2 px-3 py-2 bg-[#075E54] text-white">
+        <div className="h-7 w-7 rounded-full bg-white/20 flex items-center justify-center">
+          <BsWhatsapp className="h-3.5 w-3.5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] font-black truncate">{shop.name}</p>
+          <p className="text-[8px] opacity-70">WhatsApp Status</p>
+        </div>
+      </div>
+      <div className="flex-1 p-3 flex items-center justify-center">
+        <div className="bg-white dark:bg-[#202C33] rounded-xl p-3 shadow-sm max-w-full">
+          <p className="text-[9px] text-foreground leading-relaxed line-clamp-6 whitespace-pre-line">{ad.whatsapp_version}</p>
+          <p className="text-[7px] text-muted-foreground text-right mt-2">12:00 ✓✓</p>
+        </div>
+      </div>
+    </div>
   );
 }
