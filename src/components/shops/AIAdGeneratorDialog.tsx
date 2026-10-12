@@ -501,7 +501,7 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa kila jukwaa. J
                           </div>
                         )}
                         {selectedPlatforms.includes("tiktok") && (
-                          <div className="snap-start shrink-0 w-[240px] xl:w-auto xl:max-w-[260px] xl:mx-auto">
+                          <div className="snap-start shrink-0 w-[240px]">
                             <TikTokPreview ad={ad} product={product} />
                           </div>
                         )}
@@ -885,7 +885,7 @@ function InstagramPreview({ ad, product, shop }: { ad: GeneratedAd; product: Pro
 
 function TikTokPreview({ ad, product }: { ad: GeneratedAd; product: Product }) {
   return (
-    <div className="rounded-2xl border border-border bg-black overflow-hidden shadow-sm h-full flex flex-col aspect-[9/16] relative">
+    <div className="rounded-2xl border border-border bg-black overflow-hidden shadow-sm flex flex-col aspect-[9/16] relative w-[240px] xl:w-full xl:max-w-[260px] xl:mx-auto">
       <div className="absolute inset-0">
         <ProfessionalImage src={product.imageUrls?.[0] || product.imageUrl} alt={product.name} className="h-full w-full object-cover opacity-80" />
       </div>

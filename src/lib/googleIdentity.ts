@@ -21,6 +21,7 @@ interface GoogleIdentityApi {
     parent: HTMLElement,
     options: { theme?: string; size?: string; text?: string; shape?: string; width?: number }
   ) => void;
+  prompt: (callback?: (notification: { isDisplayMoment: () => boolean }) => void) => void;
 }
 
 declare global {
@@ -120,4 +121,44 @@ export async function renderGoogleButton(
     width: container.clientWidth || 320,
   });
   return "ready";
+}
+
+/**
+ * Initialize GIS without rendering Google's official button.
+ * Use with `promptGoogleSignIn` for a custom icon button.
+ */
+export async function initGoogleSignIn(
+  onCredential: (credential: string) => void
+): Promise<GoogleButtonStatus> {
+  const clientId = getGoogleClientId();
+  if (!clientId) return "unconfigured";
+
+  try {
+    await loadGisScript();
+  } catch (error) {
+    console.warn("Google sign-in unavailable:", error);
+    return "unavailable";
+  }
+
+  const api = window.google?.accounts?.id;
+  if (!api) return "unavailable";
+
+  credentialHandler = onCredential;
+  if (initializedClientId !== clientId) {
+    api.initialize({
+      client_id: clientId,
+      callback: (response) => {
+        if (response?.credential) credentialHandler?.(response.credential);
+      },
+      auto_select: false,
+    });
+    initializedClientId = clientId;
+  }
+
+  return "ready";
+}
+
+/** Trigger the Google One Tap / sign-in prompt. Call after `initGoogleSignIn`. */
+export function promptGoogleSignIn(): void {
+  window.google?.accounts?.id?.prompt();
 }
