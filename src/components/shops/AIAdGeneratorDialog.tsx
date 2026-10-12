@@ -267,7 +267,7 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa kila jukwaa. J
         )}
       </DialogTrigger>
 
-      <DialogContent className="p-0 gap-0 border-none shadow-2xl rounded-[1.5rem] sm:rounded-[2rem] bg-background w-[calc(100%-1rem)] max-w-[95vw] sm:max-w-[92vw] max-h-[96vh] sm:max-h-[94vh] flex flex-col overflow-hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+      <DialogContent className="p-0 gap-0 border-none shadow-2xl rounded-[1.5rem] sm:rounded-[2rem] bg-background w-[calc(100%-1rem)] max-w-[95vw] sm:max-w-[1200px] max-h-[96vh] sm:max-h-[94vh] flex flex-col overflow-hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         
         {/* Header */}
         <DialogHeader className="px-4 py-4 sm:px-6 sm:py-6 bg-gradient-to-br from-primary/5 via-background to-background border-b relative overflow-hidden flex-shrink-0">
@@ -307,7 +307,7 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa kila jukwaa. J
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="p-4 sm:p-6 space-y-6 sm:space-y-8"
+                className="p-4 sm:p-6 space-y-6 sm:space-y-8 max-w-2xl mx-auto"
               >
                 {/* Product Preview Card */}
                 <div className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 border border-border/50">
@@ -483,192 +483,195 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa kila jukwaa. J
                     </div>
                   </div>
                 ) : ad ? (
-                  <div className="space-y-6">
-                    {/* Platform Previews */}
-                    <div className="space-y-3">
+                  <div className="flex flex-col xl:flex-row gap-6 max-w-6xl mx-auto">
+                    {/* Left column: Platform Previews */}
+                    <div className="xl:w-[340px] xl:shrink-0 space-y-3">
                       <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                         <Eye className="h-3 w-3" /> Live Preview
                       </label>
-                      <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory custom-scrollbar">
+                      <div className="flex xl:flex-col gap-3 overflow-x-auto xl:overflow-x-visible pb-2 xl:pb-0 snap-x snap-mandatory custom-scrollbar">
                         {selectedPlatforms.includes("facebook") && (
-                          <div className="snap-start shrink-0 w-[300px]">
+                          <div className="snap-start shrink-0 w-[300px] xl:w-auto">
                             <FacebookPreview ad={ad} product={product} shop={shop} />
                           </div>
                         )}
                         {selectedPlatforms.includes("instagram") && (
-                          <div className="snap-start shrink-0 w-[300px]">
+                          <div className="snap-start shrink-0 w-[300px] xl:w-auto">
                             <InstagramPreview ad={ad} product={product} shop={shop} />
                           </div>
                         )}
                         {selectedPlatforms.includes("tiktok") && (
-                          <div className="snap-start shrink-0 w-[240px]">
+                          <div className="snap-start shrink-0 w-[240px] xl:w-auto xl:max-w-[260px] xl:mx-auto">
                             <TikTokPreview ad={ad} product={product} />
                           </div>
                         )}
                         {selectedPlatforms.includes("whatsapp") && (
-                          <div className="snap-start shrink-0 w-[300px]">
+                          <div className="snap-start shrink-0 w-[300px] xl:w-auto">
                             <WhatsAppPreview ad={ad} shop={shop} />
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <Tabs defaultValue="caption" className="w-full">
-                      <TabsList className="grid grid-cols-3 sm:grid-cols-6 h-auto p-1 bg-muted/30 rounded-2xl mb-6">
-                        <TabsTrigger value="headline" className="rounded-xl py-2 text-[10px] font-black uppercase">Title</TabsTrigger>
-                        <TabsTrigger value="caption" className="rounded-xl py-2 text-[10px] font-black uppercase">Caption</TabsTrigger>
-                        <TabsTrigger value="cta" className="rounded-xl py-2 text-[10px] font-black uppercase">CTA</TabsTrigger>
-                        <TabsTrigger value="hashtags" className="rounded-xl py-2 text-[10px] font-black uppercase">Tags</TabsTrigger>
-                        <TabsTrigger value="whatsapp_version" className="rounded-xl py-2 text-[10px] font-black uppercase">WA</TabsTrigger>
-                        <TabsTrigger value="short_version" className="rounded-xl py-2 text-[10px] font-black uppercase">Short</TabsTrigger>
-                      </TabsList>
+                    {/* Right column: Content + Publish */}
+                    <div className="flex-1 min-w-0 space-y-6">
+                      <Tabs defaultValue="caption" className="w-full">
+                        <TabsList className="grid grid-cols-3 sm:grid-cols-6 h-auto p-1 bg-muted/30 rounded-2xl mb-4">
+                          <TabsTrigger value="headline" className="rounded-xl py-2 text-[10px] font-black uppercase">Title</TabsTrigger>
+                          <TabsTrigger value="caption" className="rounded-xl py-2 text-[10px] font-black uppercase">Caption</TabsTrigger>
+                          <TabsTrigger value="cta" className="rounded-xl py-2 text-[10px] font-black uppercase">CTA</TabsTrigger>
+                          <TabsTrigger value="hashtags" className="rounded-xl py-2 text-[10px] font-black uppercase">Tags</TabsTrigger>
+                          <TabsTrigger value="whatsapp_version" className="rounded-xl py-2 text-[10px] font-black uppercase">WA</TabsTrigger>
+                          <TabsTrigger value="short_version" className="rounded-xl py-2 text-[10px] font-black uppercase">Short</TabsTrigger>
+                        </TabsList>
 
-                      <AnimatePresence mode="wait">
-                        <TabsContent value="headline" className="mt-0">
-                          <AdContentBlock 
-                            title="Headline" 
-                            content={ad.headline} 
-                            onCopy={() => copyToClipboard(ad.headline, 'headline')}
-                            onEdit={() => handleEdit('headline')}
-                            isCopied={copiedField === 'headline'}
-                          />
-                        </TabsContent>
-                        <TabsContent value="caption" className="mt-0">
-                          <AdContentBlock 
-                            title="Main Caption" 
-                            content={ad.caption} 
-                            onCopy={() => copyToClipboard(ad.caption, 'caption')}
-                            onEdit={() => handleEdit('caption')}
-                            isCopied={copiedField === 'caption'}
-                            isLongText
-                          />
-                        </TabsContent>
-                        <TabsContent value="cta" className="mt-0">
-                          <AdContentBlock 
-                            title="Call to Action" 
-                            content={ad.cta} 
-                            onCopy={() => copyToClipboard(ad.cta, 'cta')}
-                            onEdit={() => handleEdit('cta')}
-                            isCopied={copiedField === 'cta'}
-                          />
-                        </TabsContent>
-                        <TabsContent value="hashtags" className="mt-0">
-                          <AdContentBlock 
-                            title="Hashtags" 
-                            content={ad.hashtags} 
-                            onCopy={() => copyToClipboard(ad.hashtags, 'hashtags')}
-                            onEdit={() => handleEdit('hashtags')}
-                            isCopied={copiedField === 'hashtags'}
-                          />
-                        </TabsContent>
-                        <TabsContent value="whatsapp_version" className="mt-0">
-                          <AdContentBlock 
-                            title="WhatsApp Status Version" 
-                            content={ad.whatsapp_version} 
-                            onCopy={() => copyToClipboard(ad.whatsapp_version, 'whatsapp_version')}
-                            onEdit={() => handleEdit('whatsapp_version')}
-                            isCopied={copiedField === 'whatsapp_version'}
-                            isLongText
-                          />
-                        </TabsContent>
-                        <TabsContent value="short_version" className="mt-0">
-                          <AdContentBlock 
-                            title="TikTok/Short Version" 
-                            content={ad.short_version} 
-                            onCopy={() => copyToClipboard(ad.short_version, 'short_version')}
-                            onEdit={() => handleEdit('short_version')}
-                            isCopied={copiedField === 'short_version'}
-                          />
-                        </TabsContent>
-                      </AnimatePresence>
-                    </Tabs>
+                        <AnimatePresence mode="wait">
+                          <TabsContent value="headline" className="mt-0">
+                            <AdContentBlock
+                              title="Headline"
+                              content={ad.headline}
+                              onCopy={() => copyToClipboard(ad.headline, 'headline')}
+                              onEdit={() => handleEdit('headline')}
+                              isCopied={copiedField === 'headline'}
+                            />
+                          </TabsContent>
+                          <TabsContent value="caption" className="mt-0">
+                            <AdContentBlock
+                              title="Main Caption"
+                              content={ad.caption}
+                              onCopy={() => copyToClipboard(ad.caption, 'caption')}
+                              onEdit={() => handleEdit('caption')}
+                              isCopied={copiedField === 'caption'}
+                              isLongText
+                            />
+                          </TabsContent>
+                          <TabsContent value="cta" className="mt-0">
+                            <AdContentBlock
+                              title="Call to Action"
+                              content={ad.cta}
+                              onCopy={() => copyToClipboard(ad.cta, 'cta')}
+                              onEdit={() => handleEdit('cta')}
+                              isCopied={copiedField === 'cta'}
+                            />
+                          </TabsContent>
+                          <TabsContent value="hashtags" className="mt-0">
+                            <AdContentBlock
+                              title="Hashtags"
+                              content={ad.hashtags}
+                              onCopy={() => copyToClipboard(ad.hashtags, 'hashtags')}
+                              onEdit={() => handleEdit('hashtags')}
+                              isCopied={copiedField === 'hashtags'}
+                            />
+                          </TabsContent>
+                          <TabsContent value="whatsapp_version" className="mt-0">
+                            <AdContentBlock
+                              title="WhatsApp Status Version"
+                              content={ad.whatsapp_version}
+                              onCopy={() => copyToClipboard(ad.whatsapp_version, 'whatsapp_version')}
+                              onEdit={() => handleEdit('whatsapp_version')}
+                              isCopied={copiedField === 'whatsapp_version'}
+                              isLongText
+                            />
+                          </TabsContent>
+                          <TabsContent value="short_version" className="mt-0">
+                            <AdContentBlock
+                              title="TikTok/Short Version"
+                              content={ad.short_version}
+                              onCopy={() => copyToClipboard(ad.short_version, 'short_version')}
+                              onEdit={() => handleEdit('short_version')}
+                              isCopied={copiedField === 'short_version'}
+                            />
+                          </TabsContent>
+                        </AnimatePresence>
+                      </Tabs>
 
-                    <div className="space-y-3 pt-4 border-t border-border/50">
-                      <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <Send className="h-3 w-3" /> Publish
-                      </label>
-                      {selectedPlatforms.includes("tiktok") && (ttConnected ? (
-                        <Button
-                          onClick={() => setPublishTikTokOpen(true)}
-                          className="w-full h-12 rounded-xl bg-black hover:bg-black/80 text-white font-black uppercase tracking-widest gap-2 shadow-lg"
-                        >
-                          <Video className="h-4 w-4" />
-                          Post to TikTok
-                        </Button>
-                      ) : (
-                        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
-                          <Video className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                          <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                            TikTok haijaunganishwa. Nenda Social kuunganisha akaunti, kisha tuma moja kwa moja.
-                          </p>
+                      <div className="space-y-3 pt-4 border-t border-border/50">
+                        <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                          <Send className="h-3 w-3" /> Publish
+                        </label>
+                        {selectedPlatforms.includes("tiktok") && (ttConnected ? (
+                          <Button
+                            onClick={() => setPublishTikTokOpen(true)}
+                            className="w-full h-12 rounded-xl bg-black hover:bg-black/80 text-white font-black uppercase tracking-widest gap-2 shadow-lg"
+                          >
+                            <Video className="h-4 w-4" />
+                            Post to TikTok
+                          </Button>
+                        ) : (
+                          <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
+                            <Video className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                            <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                              TikTok haijaunganishwa. Nenda Social kuunganisha akaunti, kisha tuma moja kwa moja.
+                            </p>
+                          </div>
+                        ))}
+                        {selectedPlatforms.includes("facebook") && (fbConnected ? (
+                          <Button
+                            onClick={() => { setFbConfirmPlatform("facebook"); setFbConfirmOpen(true); }}
+                            className="w-full h-12 rounded-xl bg-[#1877F2] hover:bg-[#1877F2]/90 text-white font-black uppercase tracking-widest gap-2 shadow-lg shadow-blue-500/20"
+                          >
+                            <Facebook className="h-4 w-4" />
+                            Post to Facebook
+                          </Button>
+                        ) : (
+                          <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
+                            <Facebook className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                            <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                              Facebook haijaunganishwa. Nenda Social kuunganisha akaunti.
+                            </p>
+                          </div>
+                        ))}
+                        {selectedPlatforms.includes("instagram") && (fbConnected ? (
+                          <Button
+                            onClick={() => { setFbConfirmPlatform("instagram"); setFbConfirmOpen(true); }}
+                            className="w-full h-12 rounded-xl bg-gradient-to-r from-[#833AB4] via-[#E1306C] to-[#F77737] hover:opacity-90 text-white font-black uppercase tracking-widest gap-2 shadow-lg shadow-pink-500/20"
+                          >
+                            <Instagram className="h-4 w-4" />
+                            Post to Instagram
+                          </Button>
+                        ) : (
+                          <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
+                            <Instagram className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                            <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                              Instagram haijaunganishwa. Nenda Social kuunganisha akaunti.
+                            </p>
+                          </div>
+                        ))}
+                        {selectedPlatforms.includes("whatsapp") && (
+                          <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-muted/20 p-3">
+                            <BsWhatsapp className="mt-0.5 h-4 w-4 shrink-0 text-[#25D366]" />
+                            <p className="text-[11px] font-semibold text-muted-foreground">
+                              WhatsApp hutumia "Share to WhatsApp" hapa chini — hakuna akaunti inayohitajika.
+                            </p>
+                          </div>
+                        )}
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <Button
+                            onClick={handleGenerate}
+                            variant="outline"
+                            className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest gap-2 border-2"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            Regenerate
+                          </Button>
+                          <Button
+                            onClick={shareToWhatsApp}
+                            className="flex-1 h-12 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-white font-black uppercase tracking-widest gap-2 shadow-lg shadow-green-500/20"
+                          >
+                            <BsWhatsapp className="h-4 w-4" />
+                            Share to WhatsApp
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              const allText = `*${ad.headline}*\n\n${ad.caption}\n\n*${ad.cta}*\n\n${ad.hashtags}`;
+                              copyToClipboard(allText, 'all');
+                            }}
+                            className="flex-1 h-12 rounded-xl bg-primary text-white font-black uppercase tracking-widest gap-2 shadow-lg shadow-primary/20"
+                          >
+                            {copiedField === 'all' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            Copy All
+                          </Button>
                         </div>
-                      ))}
-                      {selectedPlatforms.includes("facebook") && (fbConnected ? (
-                        <Button
-                          onClick={() => { setFbConfirmPlatform("facebook"); setFbConfirmOpen(true); }}
-                          className="w-full h-12 rounded-xl bg-[#1877F2] hover:bg-[#1877F2]/90 text-white font-black uppercase tracking-widest gap-2 shadow-lg shadow-blue-500/20"
-                        >
-                          <Facebook className="h-4 w-4" />
-                          Post to Facebook
-                        </Button>
-                      ) : (
-                        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
-                          <Facebook className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                          <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                            Facebook haijaunganishwa. Nenda Social kuunganisha akaunti.
-                          </p>
-                        </div>
-                      ))}
-                      {selectedPlatforms.includes("instagram") && (fbConnected ? (
-                        <Button
-                          onClick={() => { setFbConfirmPlatform("instagram"); setFbConfirmOpen(true); }}
-                          className="w-full h-12 rounded-xl bg-gradient-to-r from-[#833AB4] via-[#E1306C] to-[#F77737] hover:opacity-90 text-white font-black uppercase tracking-widest gap-2 shadow-lg shadow-pink-500/20"
-                        >
-                          <Instagram className="h-4 w-4" />
-                          Post to Instagram
-                        </Button>
-                      ) : (
-                        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
-                          <Instagram className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                          <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                            Instagram haijaunganishwa. Nenda Social kuunganisha akaunti.
-                          </p>
-                        </div>
-                      ))}
-                      {selectedPlatforms.includes("whatsapp") && (
-                        <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-muted/20 p-3">
-                          <BsWhatsapp className="mt-0.5 h-4 w-4 shrink-0 text-[#25D366]" />
-                          <p className="text-[11px] font-semibold text-muted-foreground">
-                            WhatsApp hutumia "Share to WhatsApp" hapa chini — hakuna akaunti inayohitajika.
-                          </p>
-                        </div>
-                      )}
-                      <div className="flex flex-col sm:flex-row gap-3">
-                      <Button 
-                        onClick={handleGenerate} 
-                        variant="outline" 
-                        className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest gap-2 border-2"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                        Regenerate
-                      </Button>
-                      <Button 
-                        onClick={shareToWhatsApp}
-                        className="flex-1 h-12 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-white font-black uppercase tracking-widest gap-2 shadow-lg shadow-green-500/20"
-                      >
-                        <BsWhatsapp className="h-4 w-4" />
-                        Share to WhatsApp
-                      </Button>
-                      <Button 
-                        onClick={() => {
-                          const allText = `*${ad.headline}*\n\n${ad.caption}\n\n*${ad.cta}*\n\n${ad.hashtags}`;
-                          copyToClipboard(allText, 'all');
-                        }}
-                        className="flex-1 h-12 rounded-xl bg-primary text-white font-black uppercase tracking-widest gap-2 shadow-lg shadow-primary/20"
-                      >
-                        {copiedField === 'all' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        Copy All
-                      </Button>
                       </div>
                     </div>
                   </div>
@@ -791,7 +794,7 @@ function AdContentBlock({
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group relative bg-card border-2 border-border/50 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 shadow-sm hover:border-primary/20 transition-all"
+      className="group relative bg-card border-2 border-border/50 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 shadow-sm hover:border-primary/20 transition-all max-w-2xl"
     >
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">{title}</h4>
