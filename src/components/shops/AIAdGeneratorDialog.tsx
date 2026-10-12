@@ -267,7 +267,7 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa kila jukwaa. J
         )}
       </DialogTrigger>
 
-      <DialogContent className="p-0 gap-0 border-none shadow-2xl rounded-[1.5rem] sm:rounded-[2rem] bg-background w-[calc(100%-1rem)] max-w-[96vw] sm:max-w-[750px] max-h-[92vh] sm:max-h-[85vh] flex flex-col overflow-hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+      <DialogContent className="p-0 gap-0 border-none shadow-2xl rounded-[1.5rem] sm:rounded-[2rem] bg-background w-[calc(100%-1rem)] max-w-[95vw] sm:max-w-[92vw] max-h-[96vh] sm:max-h-[94vh] flex flex-col overflow-hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         
         {/* Header */}
         <DialogHeader className="px-4 py-4 sm:px-6 sm:py-6 bg-gradient-to-br from-primary/5 via-background to-background border-b relative overflow-hidden flex-shrink-0">
@@ -491,22 +491,22 @@ Hakikisha matangazo yanavutia wateja na yanazingatia utamaduni wa kila jukwaa. J
                       </label>
                       <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory custom-scrollbar">
                         {selectedPlatforms.includes("facebook") && (
-                          <div className="snap-start shrink-0 w-[260px]">
+                          <div className="snap-start shrink-0 w-[300px]">
                             <FacebookPreview ad={ad} product={product} shop={shop} />
                           </div>
                         )}
                         {selectedPlatforms.includes("instagram") && (
-                          <div className="snap-start shrink-0 w-[260px]">
+                          <div className="snap-start shrink-0 w-[300px]">
                             <InstagramPreview ad={ad} product={product} shop={shop} />
                           </div>
                         )}
                         {selectedPlatforms.includes("tiktok") && (
-                          <div className="snap-start shrink-0 w-[200px]">
+                          <div className="snap-start shrink-0 w-[240px]">
                             <TikTokPreview ad={ad} product={product} />
                           </div>
                         )}
                         {selectedPlatforms.includes("whatsapp") && (
-                          <div className="snap-start shrink-0 w-[260px]">
+                          <div className="snap-start shrink-0 w-[300px]">
                             <WhatsAppPreview ad={ad} shop={shop} />
                           </div>
                         )}
@@ -824,26 +824,27 @@ function AdContentBlock({
 function FacebookPreview({ ad, product, shop }: { ad: GeneratedAd; product: Product; shop: Shop }) {
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm h-full flex flex-col">
-      <div className="flex items-center gap-2 px-3 py-2 border-b bg-[#1877F2]/5">
-        <div className="h-7 w-7 rounded-full bg-[#1877F2]/10 flex items-center justify-center">
-          <Facebook className="h-3.5 w-3.5 text-[#1877F2]" />
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b bg-[#1877F2]/5">
+        <div className="h-8 w-8 rounded-full bg-[#1877F2]/10 flex items-center justify-center">
+          <Facebook className="h-4 w-4 text-[#1877F2]" />
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-black truncate">{shop.name}</p>
-          <p className="text-[8px] text-muted-foreground">Sponsored</p>
+          <p className="text-xs font-black truncate">{shop.name}</p>
+          <p className="text-[10px] text-muted-foreground">Sponsored</p>
         </div>
       </div>
-      <div className="h-32 bg-muted overflow-hidden">
+      <div className="h-36 bg-muted overflow-hidden">
         <ProfessionalImage src={product.imageUrls?.[0] || product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
       </div>
-      <div className="p-3 flex-1 flex flex-col gap-1.5">
-        <p className="text-[10px] font-black leading-tight">{ad.headline}</p>
-        <p className="text-[9px] text-muted-foreground line-clamp-3 leading-relaxed">{ad.caption}</p>
+      <div className="p-3.5 flex-1 flex flex-col gap-2">
+        <p className="text-sm font-black leading-snug">{ad.headline}</p>
+        <p className="text-xs text-muted-foreground line-clamp-5 leading-relaxed">{ad.caption}</p>
+        {ad.cta && <p className="text-xs font-bold text-primary mt-auto">{ad.cta}</p>}
       </div>
-      <div className="px-3 py-2 border-t flex items-center justify-around">
-        <span className="flex items-center gap-1 text-[9px] text-muted-foreground"><Heart className="h-3 w-3" /> Like</span>
-        <span className="flex items-center gap-1 text-[9px] text-muted-foreground"><MessageCircle className="h-3 w-3" /> Comment</span>
-        <span className="flex items-center gap-1 text-[9px] text-muted-foreground"><Share2 className="h-3 w-3" /> Share</span>
+      <div className="px-3 py-2.5 border-t flex items-center justify-around">
+        <span className="flex items-center gap-1 text-xs text-muted-foreground"><Heart className="h-3.5 w-3.5" /> Like</span>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground"><MessageCircle className="h-3.5 w-3.5" /> Comment</span>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground"><Share2 className="h-3.5 w-3.5" /> Share</span>
       </div>
     </div>
   );
@@ -852,28 +853,28 @@ function FacebookPreview({ ad, product, shop }: { ad: GeneratedAd; product: Prod
 function InstagramPreview({ ad, product, shop }: { ad: GeneratedAd; product: Product; shop: Shop }) {
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm h-full flex flex-col">
-      <div className="flex items-center gap-2 px-3 py-2">
-        <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-[#F77737] via-[#E1306C] to-[#833AB4] p-[1.5px]">
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-[#F77737] via-[#E1306C] to-[#833AB4] p-[1.5px]">
           <div className="h-full w-full rounded-full bg-card flex items-center justify-center">
-            <span className="text-[8px] font-black">{shop.name.charAt(0)}</span>
+            <span className="text-[10px] font-black">{shop.name.charAt(0)}</span>
           </div>
         </div>
-        <p className="text-[10px] font-black truncate">{shop.name}</p>
+        <p className="text-xs font-black truncate">{shop.name}</p>
       </div>
-      <div className="h-32 bg-muted overflow-hidden">
+      <div className="h-36 bg-muted overflow-hidden">
         <ProfessionalImage src={product.imageUrls?.[0] || product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
       </div>
-      <div className="px-3 pt-2 flex items-center gap-3">
-        <Heart className="h-4 w-4" />
-        <MessageCircle className="h-4 w-4" />
-        <Share2 className="h-4 w-4" />
+      <div className="px-3 pt-2.5 flex items-center gap-3">
+        <Heart className="h-5 w-5" />
+        <MessageCircle className="h-5 w-5" />
+        <Share2 className="h-5 w-5" />
       </div>
-      <div className="p-3 flex-1">
-        <p className="text-[9px] leading-relaxed line-clamp-4">
+      <div className="p-3.5 flex-1">
+        <p className="text-xs leading-relaxed line-clamp-6">
           <span className="font-black">{shop.name} </span>
           {ad.caption}
         </p>
-        <p className="text-[8px] text-[#00376B] mt-1 font-medium">{ad.hashtags}</p>
+        <p className="text-[11px] text-[#00376B] dark:text-blue-400 mt-1.5 font-medium leading-relaxed">{ad.hashtags}</p>
       </div>
     </div>
   );
@@ -886,27 +887,27 @@ function TikTokPreview({ ad, product }: { ad: GeneratedAd; product: Product }) {
         <ProfessionalImage src={product.imageUrls?.[0] || product.imageUrl} alt={product.name} className="h-full w-full object-cover opacity-80" />
       </div>
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
-      <div className="absolute right-2 bottom-16 flex flex-col gap-4 items-center">
+      <div className="absolute right-2 bottom-20 flex flex-col gap-4 items-center">
         <div className="flex flex-col items-center gap-0.5">
-          <Heart className="h-5 w-5 text-white" />
-          <span className="text-[7px] text-white font-bold">Like</span>
+          <Heart className="h-6 w-6 text-white" />
+          <span className="text-[9px] text-white font-bold">Like</span>
         </div>
         <div className="flex flex-col items-center gap-0.5">
-          <MessageCircle className="h-5 w-5 text-white" />
-          <span className="text-[7px] text-white font-bold">Comment</span>
+          <MessageCircle className="h-6 w-6 text-white" />
+          <span className="text-[9px] text-white font-bold">Comment</span>
         </div>
         <div className="flex flex-col items-center gap-0.5">
-          <Share2 className="h-5 w-5 text-white" />
-          <span className="text-[7px] text-white font-bold">Share</span>
+          <Share2 className="h-6 w-6 text-white" />
+          <span className="text-[9px] text-white font-bold">Share</span>
         </div>
       </div>
-      <div className="absolute bottom-0 left-0 right-12 p-3">
-        <p className="text-[9px] text-white font-black leading-tight line-clamp-1">{ad.short_version?.split("\n")[0] || ad.headline}</p>
-        <p className="text-[8px] text-white/80 line-clamp-2 mt-1 leading-relaxed">{ad.short_version}</p>
-        <p className="text-[7px] text-white/60 mt-1">{ad.hashtags}</p>
-        <div className="flex items-center gap-1 mt-1.5">
-          <Music className="h-2.5 w-2.5 text-white/60" />
-          <span className="text-[7px] text-white/60">Original sound</span>
+      <div className="absolute bottom-0 left-0 right-14 p-3">
+        <p className="text-xs text-white font-black leading-snug line-clamp-2">{ad.short_version?.split("\n")[0] || ad.headline}</p>
+        <p className="text-[11px] text-white/80 line-clamp-3 mt-1.5 leading-relaxed">{ad.short_version}</p>
+        <p className="text-[10px] text-white/60 mt-1">{ad.hashtags}</p>
+        <div className="flex items-center gap-1 mt-2">
+          <Music className="h-3 w-3 text-white/60" />
+          <span className="text-[9px] text-white/60">Original sound</span>
         </div>
       </div>
     </div>
@@ -916,19 +917,19 @@ function TikTokPreview({ ad, product }: { ad: GeneratedAd; product: Product }) {
 function WhatsAppPreview({ ad, shop }: { ad: GeneratedAd; shop: Shop }) {
   return (
     <div className="rounded-2xl border border-border bg-[#ECE5DD] dark:bg-[#0B141A] overflow-hidden shadow-sm h-full flex flex-col">
-      <div className="flex items-center gap-2 px-3 py-2 bg-[#075E54] text-white">
-        <div className="h-7 w-7 rounded-full bg-white/20 flex items-center justify-center">
-          <BsWhatsapp className="h-3.5 w-3.5" />
+      <div className="flex items-center gap-2 px-3 py-2.5 bg-[#075E54] text-white">
+        <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
+          <BsWhatsapp className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-black truncate">{shop.name}</p>
-          <p className="text-[8px] opacity-70">WhatsApp Status</p>
+          <p className="text-xs font-black truncate">{shop.name}</p>
+          <p className="text-[10px] opacity-70">WhatsApp Status</p>
         </div>
       </div>
       <div className="flex-1 p-3 flex items-center justify-center">
         <div className="bg-white dark:bg-[#202C33] rounded-xl p-3 shadow-sm max-w-full">
-          <p className="text-[9px] text-foreground leading-relaxed line-clamp-6 whitespace-pre-line">{ad.whatsapp_version}</p>
-          <p className="text-[7px] text-muted-foreground text-right mt-2">12:00 ✓✓</p>
+          <p className="text-xs text-foreground leading-relaxed line-clamp-8 whitespace-pre-line">{ad.whatsapp_version}</p>
+          <p className="text-[10px] text-muted-foreground text-right mt-2">12:00 ✓✓</p>
         </div>
       </div>
     </div>
