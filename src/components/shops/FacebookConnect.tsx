@@ -85,13 +85,15 @@ export default function FacebookConnect({ shopId }: FacebookConnectProps) {
     }
     setConnecting(true);
     // Construct Facebook Login URL
-    // Scopes needed: pages_manage_posts, pages_show_list, pages_read_engagement, instagram_basic, instagram_content_publish
+    // Scopes needed: pages_manage_posts, pages_show_list, pages_read_engagement, instagram_basic, instagram_content_publish, read_insights, instagram_manage_insights
     const scopes = [
       "pages_manage_posts",
       "pages_show_list",
       "pages_read_engagement",
       "instagram_basic",
-      "instagram_content_publish"
+      "instagram_content_publish",
+      "read_insights",
+      "instagram_manage_insights"
     ].join(",");
     // Pass both shopId and the current origin so the cloud function can redirect back locally or production
     const stateObj = { shopId, origin: window.location.origin, returnPath: window.location.pathname };

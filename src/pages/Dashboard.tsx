@@ -171,7 +171,7 @@ export default function Dashboard() {
         </div>
         {permissions.canAccessMarketing && (
           <div>
-            <MarketingAnalytics traffic={traffic} />
+            <MarketingAnalytics traffic={traffic} shopId={currentShopId} />
           </div>
         )}
       </div>

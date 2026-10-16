@@ -29,6 +29,8 @@ const SOCIAL_LOGS_PATH = "/api/v1/social-logs/";
 const FACEBOOK_SESSIONS_PATH = "/api/v1/social/facebook/sessions/";
 const FACEBOOK_CONNECTIONS_PATH = "/api/v1/social/facebook/connections";
 const FACEBOOK_POSTS_PATH = "/api/v1/social/facebook/posts";
+const FACEBOOK_INSIGHTS_PATH = "/api/v1/social/facebook/insights";
+const INSTAGRAM_INSIGHTS_PATH = "/api/v1/social/instagram/insights";
 const FACEBOOK_CALLBACK_PATH = "/api/v1/social/facebook/callback";
 
 /** DRF's max_page_size; a shop has a handful of integrations, not pages. */
@@ -159,6 +161,84 @@ export interface FacebookPostResult {
   facebookPostId?: string;
   /** Null when no Instagram business account is linked or Instagram failed. */
   instagramPostId?: string;
+}
+
+export interface FacebookPageInsights {
+  pageId: string;
+  pageName?: string;
+  impressions: number;
+  engagedUsers: number;
+  followers: number;
+  postEngagements: number;
+  negativeFeedback: number;
+  pageViews: number;
+}
+
+export function toFacebookPageInsights(raw: unknown): FacebookPageInsights {
+  const row = isRecord(raw) ? raw : {};
+  return {
+    pageId: stringOr(row.pageId),
+    pageName: optionalString(row.pageName),
+    impressions: Number(row.impressions) || 0,
+    engagedUsers: Number(row.engagedUsers) || 0,
+    followers: Number(row.followers) || 0,
+    postEngagements: Number(row.postEngagements) || 0,
+    negativeFeedback: Number(row.negativeFeedback) || 0,
+    pageViews: Number(row.pageViews) || 0,
+  };
+}
+
+/**
+ * Fetch Facebook Page Insights (reach, engagement, followers) for the
+ * shop's connected page. Requires ``read_insights`` permission.
+ */
+export async function fetchFacebookPageInsights(shopId: string): Promise<FacebookPageInsights | null> {
+  try {
+    const body = await getApiClient().get<unknown>(FACEBOOK_INSIGHTS_PATH, {
+      query: { shopId },
+    });
+    return toFacebookPageInsights(body);
+  } catch {
+    return null;
+  }
+}
+
+export interface InstagramInsights {
+  connected: boolean;
+  instagramId: string | null;
+  username: string | null;
+  name: string | null;
+  followers: number;
+  mediaCount: number;
+  impressions: number;
+  reach: number;
+  engagement: number;
+}
+
+function toInstagramInsights(raw: unknown): InstagramInsights {
+  const row = isRecord(raw) ? raw : {};
+  return {
+    connected: row.connected === true,
+    instagramId: optionalString(row.instagramId) ?? null,
+    username: optionalString(row.username) ?? null,
+    name: optionalString(row.name) ?? null,
+    followers: Number(row.followers) || 0,
+    mediaCount: Number(row.mediaCount) || 0,
+    impressions: Number(row.impressions) || 0,
+    reach: Number(row.reach) || 0,
+    engagement: Number(row.engagement) || 0,
+  };
+}
+
+export async function fetchInstagramInsights(shopId: string): Promise<InstagramInsights | null> {
+  try {
+    const body = await getApiClient().get<unknown>(INSTAGRAM_INSIGHTS_PATH, {
+      query: { shopId },
+    });
+    return toInstagramInsights(body);
+  } catch {
+    return null;
+  }
 }
 
 /**

@@ -215,6 +215,15 @@
     scrollbar-width: none;
   }
 
+  /* Hide scrollbar on main content area for consistent look across all pages */
+  main::-webkit-scrollbar {
+    display: none;
+  }
+  main {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   .deep-soft-shadow {
     box-shadow: 0 30px 100px -20px rgba(0, 0, 0, 0.15), 0 10px 40px -10px rgba(0, 0, 0, 0.05);
   }

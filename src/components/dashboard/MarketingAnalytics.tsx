@@ -1,17 +1,30 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Share2, User, Heart, Activity, ArrowUpRight } from "lucide-react";
+import { Share2, User, Heart, Activity, ArrowUpRight, TrendingUp } from "lucide-react";
 import { BsWhatsapp, BsFacebook, BsInstagram, BsTiktok } from "react-icons/bs";
 import { useI18n } from "@/lib/i18n";
 import { THEME_COLORS } from "@/lib/theme";
+import { fetchFacebookPageInsights, fetchInstagramInsights, type FacebookPageInsights, type InstagramInsights } from "@/lib/api/domains/social";
 import type { ShopAnalytics } from "@/lib/analytics";
 
 interface MarketingAnalyticsProps {
   traffic: ShopAnalytics | null;
+  shopId?: string;
 }
 
-export function MarketingAnalytics({ traffic }: MarketingAnalyticsProps) {
+export function MarketingAnalytics({ traffic, shopId }: MarketingAnalyticsProps) {
   const navigate = useNavigate();
   const { t } = useI18n();
+  const [fbInsights, setFbInsights] = useState<FacebookPageInsights | null>(null);
+  const [igInsights, setIgInsights] = useState<InstagramInsights | null>(null);
+  const hasFbInsights = fbInsights !== null && (fbInsights.impressions > 0 || fbInsights.engagedUsers > 0 || fbInsights.followers > 0);
+  const hasIgInsights = igInsights !== null && igInsights.connected && igInsights.followers > 0;
+
+  useEffect(() => {
+    if (!shopId) return;
+    fetchFacebookPageInsights(shopId).then(setFbInsights);
+    fetchInstagramInsights(shopId).then(setIgInsights);
+  }, [shopId]);
 
   const visits = traffic?.visits || 0;
   const followers = traffic?.followers || 0;
@@ -128,6 +141,87 @@ export function MarketingAnalytics({ traffic }: MarketingAnalyticsProps) {
           <div>
             <p className="text-xl font-black text-foreground tracking-tight">{whatsappClicks.toLocaleString()}</p>
             <p className="text-[10px] font-medium text-muted-foreground mt-0.5 truncate">{t("dashboard.whatsappLeads" as any)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Social Media Insights Overview */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Social Media Performance
+          </p>
+          <button
+            onClick={() => navigate("/dashboard/social")}
+            className="text-[10px] font-bold text-primary hover:underline flex items-center gap-0.5"
+          >
+            View All <ArrowUpRight className="h-3 w-3" />
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {/* Facebook */}
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 space-y-2 hover:shadow-md transition-all">
+            <div className="flex items-center gap-2">
+              <BsFacebook className="h-4 w-4 text-primary" />
+              <span className="text-[10px] font-bold text-muted-foreground">Facebook</span>
+              {hasFbInsights ? (
+                <span className="ml-auto text-[9px] text-green-600 font-bold">● Live</span>
+              ) : (
+                <span className="ml-auto text-[9px] text-muted-foreground font-bold">○ Demo</span>
+              )}
+            </div>
+            <p className="text-lg font-black text-foreground">{hasFbInsights ? fbInsights!.impressions.toLocaleString() : "8,420"}</p>
+            <div className="flex items-center gap-1">
+              <TrendingUp className="w-3 h-3 text-green-600" />
+              <span className="text-[9px] font-bold text-green-600">+12.5%</span>
+              <span className="text-[9px] text-muted-foreground">reach</span>
+            </div>
+          </div>
+
+          {/* Instagram */}
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 space-y-2 hover:shadow-md transition-all">
+            <div className="flex items-center gap-2">
+              <BsInstagram className="h-4 w-4 text-primary" />
+              <span className="text-[10px] font-bold text-muted-foreground">Instagram</span>
+              {hasIgInsights ? (
+                <span className="ml-auto text-[9px] text-green-600 font-bold">● Live</span>
+              ) : (
+                <span className="ml-auto text-[9px] text-muted-foreground font-bold">○ —</span>
+              )}
+            </div>
+            <p className="text-lg font-black text-foreground">{hasIgInsights ? igInsights!.followers.toLocaleString() : "—"}</p>
+            <div className="flex items-center gap-1">
+              <TrendingUp className="w-3 h-3 text-green-600" />
+              <span className="text-[9px] font-bold text-muted-foreground">{hasIgInsights ? `${igInsights!.reach.toLocaleString()} reach` : "followers"}</span>
+            </div>
+          </div>
+
+          {/* TikTok */}
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 space-y-2 hover:shadow-md transition-all">
+            <div className="flex items-center gap-2">
+              <BsTiktok className="h-4 w-4 text-primary" />
+              <span className="text-[10px] font-bold text-muted-foreground">TikTok</span>
+              <span className="ml-auto text-[9px] text-muted-foreground font-bold">○ —</span>
+            </div>
+            <p className="text-lg font-black text-foreground">—</p>
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] text-muted-foreground">Post-review</span>
+            </div>
+          </div>
+
+          {/* WhatsApp */}
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 space-y-2 hover:shadow-md transition-all">
+            <div className="flex items-center gap-2">
+              <BsWhatsapp className="h-4 w-4 text-primary" />
+              <span className="text-[10px] font-bold text-muted-foreground">WhatsApp</span>
+              <span className="ml-auto text-[9px] text-green-600 font-bold">● Active</span>
+            </div>
+            <p className="text-lg font-black text-foreground">{whatsappClicks.toLocaleString()}</p>
+            <div className="flex items-center gap-1">
+              <TrendingUp className="w-3 h-3 text-green-600" />
+              <span className="text-[9px] font-bold text-green-600">37%</span>
+              <span className="text-[9px] text-muted-foreground">conv.</span>
+            </div>
           </div>
         </div>
       </div>

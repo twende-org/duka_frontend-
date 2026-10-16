@@ -71,7 +71,7 @@ export function ProductInsights({ products, inventory, recentSales }: ProductIns
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
         {tabs.map((tab) => {
           const colors = THEME_COLORS[tab.variant];
           const isActive = activeTab === tab.id;
