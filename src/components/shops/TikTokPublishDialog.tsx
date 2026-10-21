@@ -27,6 +27,7 @@ type PrivacyChoice = TikTokPostOptions["privacyLevel"];
 const PRIVACY_LABELS: Record<string, string> = {
   PUBLIC_TO_EVERYONE: "Everyone",
   MUTUAL_FOLLOW_FRIENDS: "Friends",
+  FOLLOWER_OF_CREATOR: "Followers",
   SELF_ONLY: "Only me",
 };
 
@@ -130,10 +131,10 @@ export default function TikTokPublishDialog({
   }, [open, product, initialCaption, loadCreatorInfo]);
 
   // Branded content cannot be published as private: force a re-pick if the
-  // merchant selected "Only me" and then enabled commercial disclosure.
+  // merchant selected "Only me" and then enabled branded content disclosure.
   useEffect(() => {
-    if (commercialOn && privacy === "SELF_ONLY") setPrivacy("");
-  }, [commercialOn, privacy]);
+    if (brandedContent && privacy === "SELF_ONLY") setPrivacy("");
+  }, [brandedContent, privacy]);
 
   const videoSeconds = estimateVideoSeconds(imageCount || 1);
   const maxSeconds = creatorInfo?.maxVideoPostDurationSec || 0;
@@ -373,10 +374,10 @@ export default function TikTokPublishDialog({
                     <SelectItem
                       key={option}
                       value={option}
-                      disabled={commercialOn && option === "SELF_ONLY"}
+                      disabled={brandedContent && option === "SELF_ONLY"}
                     >
                       {PRIVACY_LABELS[option] || option}
-                      {commercialOn && option === "SELF_ONLY" ? " (not available for branded content)" : ""}
+                      {brandedContent && option === "SELF_ONLY" ? " (not available for branded content)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -387,8 +388,12 @@ export default function TikTokPublishDialog({
               <Label>Interactions</Label>
               <div className="space-y-2.5">
                 {interactionRow("comments", allowComments, setAllowComments, creatorInfo.commentDisabled)}
-                {interactionRow("duet", allowDuet, setAllowDuet, creatorInfo.duetDisabled)}
-                {interactionRow("stitch", allowStitch, setAllowStitch, creatorInfo.stitchDisabled)}
+                {postFormat !== "photo" && (
+                  <>
+                    {interactionRow("duet", allowDuet, setAllowDuet, creatorInfo.duetDisabled)}
+                    {interactionRow("stitch", allowStitch, setAllowStitch, creatorInfo.stitchDisabled)}
+                  </>
+                )}
               </div>
             </div>
 
@@ -427,6 +432,11 @@ export default function TikTokPublishDialog({
                       </span>
                     </span>
                   </label>
+                  {ownBrand && (
+                    <p className="text-xs text-blue-700 dark:text-blue-400 ml-6">
+                      Your photo/video will be labeled as &quot;Promotional content&quot;
+                    </p>
+                  )}
                   <label className="flex items-start gap-3 cursor-pointer">
                     <Checkbox
                       checked={brandedContent}
@@ -440,9 +450,14 @@ export default function TikTokPublishDialog({
                       </span>
                     </span>
                   </label>
+                  {brandedContent && (
+                    <p className="text-xs text-blue-700 dark:text-blue-400 ml-6">
+                      Your photo/video will be labeled as &quot;Paid partnership&quot;
+                    </p>
+                  )}
                   {!ownBrand && !brandedContent && (
                     <p className="text-xs text-amber-700 dark:text-amber-400">
-                      Pick at least one option to describe this commercial content.
+                      You need to indicate if your content promotes yourself, a third party, or both.
                     </p>
                   )}
                 </div>
@@ -452,8 +467,11 @@ export default function TikTokPublishDialog({
             <label className="flex items-start gap-3 rounded-md border p-3 cursor-pointer">
               <Checkbox checked={consent} onCheckedChange={(checked) => setConsent(checked === true)} className="mt-0.5" />
               <span className="text-xs text-muted-foreground">
-                By posting, you agree to TikTok's Music Usage Confirmation
-                {commercialOn && " and Branded Content Policy"}.
+                By posting, you agree to TikTok&apos;s{" "}
+                {brandedContent
+                  ? "Branded Content Policy and Music Usage Confirmation"
+                  : "Music Usage Confirmation"}
+                .
               </span>
             </label>
 

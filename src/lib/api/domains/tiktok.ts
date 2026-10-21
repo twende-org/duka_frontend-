@@ -191,7 +191,7 @@ export interface TikTokPostResult {
  */
 export interface TikTokPostOptions {
   postFormat?: "reel" | "photo";
-  privacyLevel?: "PUBLIC_TO_EVERYONE" | "MUTUAL_FOLLOW_FRIENDS" | "SELF_ONLY";
+  privacyLevel?: "PUBLIC_TO_EVERYONE" | "MUTUAL_FOLLOW_FRIENDS" | "FOLLOWER_OF_CREATOR" | "SELF_ONLY";
   disableComment?: boolean;
   disableDuet?: boolean;
   disableStitch?: boolean;
