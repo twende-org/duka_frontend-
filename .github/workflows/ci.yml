@@ -35,43 +35,68 @@ jobs:
       - name: Production build
         run: npm run build
 
-  deploy:
+  build-and-push:
+    name: Build and push image
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push image
-        env:
-          IMAGE: ${{ secrets.DOCKER_USERNAME }}/duka_frontend:latest
-        run: |
-          docker build -t "$IMAGE" .
-          docker push "$IMAGE"
+      # VITE_* values are injected at container start via /config.js, so this
+      # image is environment-agnostic and needs no build args. The server pulls
+      # it; it never builds the app itself.
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/duka_frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/duka_frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Roll out on server
+  deploy-to-production:
+    name: Deploy to production
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
         uses: appleboy/ssh-action@v1
-        env:
-          IMAGE: ${{ secrets.DOCKER_USERNAME }}/duka_frontend:latest
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_KEY }}
-          envs: IMAGE
-          script_stop: true
           script: |
-            cd ~/duka_frontend || { echo '~/duka_frontend is not checked out yet - run the one-time setup in the README'; exit 0; }
+            set -e
+            # Orchestration lives in the infra repo; app source is never cloned here.
+            cd ~/twendedigital-infra
             git pull --ff-only
-            export FRONTEND_IMAGE="$IMAGE"
-            docker compose -f docker-compose.prod.yml pull app
-            docker compose -f docker-compose.prod.yml up -d
-            sleep 3
-            # No host port is published in prod (Traefik only), so verify from inside the container.
-            docker exec duka_frontend_app wget -qO- http://127.0.0.1/config.js
-            docker compose -f docker-compose.prod.yml ps
+            cd apps/duka_frontend
+
+            docker compose pull web
+            docker compose up -d
+            docker compose ps
+
+            # nginx and the config.js entrypoint need a moment; probe every replica.
+            ok=0
+            for attempt in $(seq 1 20); do
+              ok=1
+              for cid in $(docker compose ps -q web); do
+                docker exec "$cid" wget -q -O - http://127.0.0.1/config.js >/dev/null 2>&1 || ok=0
+              done
+              [ "$ok" = "1" ] && echo "all frontend replicas served config.js" && break
+              sleep 3
+            done
+            [ "$ok" = "1" ]
+
             docker image prune -f
