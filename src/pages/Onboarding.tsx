@@ -64,14 +64,15 @@ function MapUpdater({ lat, lon }: { lat: number | null, lon: number | null }) {
 }
 
 // --- DATA LISTS ---
-const SHOP_TYPES = [
-  { id: "retail", icon: Store, label: { en: "Retail Shop", sw: "Duka la Rejareja" } },
-  { id: "wholesale", icon: Package, label: { en: "Wholesale Shop", sw: "Duka la Jumla" } },
-  { id: "distributor", icon: Truck, label: { en: "Distributor", sw: "Msambazaji" } },
-  { id: "manufacturer", icon: Factory, label: { en: "Manufacturer / Producer", sw: "Mzalishaji" } },
-  { id: "importer", icon: Globe, label: { en: "Importer / Reseller", sw: "Muingizaji" } },
-  { id: "general", icon: Store, label: { en: "General Shop", sw: "Duka la Kawaida" } },
-  { id: "specialty", icon: Component, label: { en: "Specialty Shop", sw: "Duka Maalum" } },
+type Capability = "hasVariants" | "sellsByQuantity" | "sellsByWeight" | "sellsByLength" | "sellsByVolume" | "sellsSetsOrPackages";
+
+const SELLING_UNITS: { key: Capability; en: string; sw: string }[] = [
+  { key: "sellsByQuantity", en: "Pieces", sw: "Idadi" },
+  { key: "sellsByWeight", en: "Weight (kg/g)", sw: "Uzito (kg/g)" },
+  { key: "sellsByLength", en: "Length (m)", sw: "Urefu (m)" },
+  { key: "sellsByVolume", en: "Volume (L/ml)", sw: "Ujazo (L/ml)" },
+  { key: "sellsSetsOrPackages", en: "Sets / Packages", sw: "Seti / Fungu" },
+  { key: "hasVariants", en: "Sizes & colours", sw: "Size na rangi" },
 ];
 
 const PRODUCT_CATEGORIES = [
@@ -93,46 +94,10 @@ const PRODUCT_CATEGORIES = [
   { id: "other", icon: Box, label: { en: "General/Other", sw: "Mengineyo" } },
 ];
 
-const SALES_CHANNELS = [
-  { id: "physical", icon: Store, label: { en: "Physical Shop", sw: "Duka la Kuonekana" } },
-  { id: "online", icon: Globe, label: { en: "Online Store", sw: "Duka la Mtandaoni" } },
-  { id: "marketplace", icon: ShoppingCart, label: { en: "Marketplace", sw: "Soko la Mtandaoni" } },
-  { id: "social", icon: Smartphone, label: { en: "Social Media", sw: "Mitandao ya Kijamii" } },
-  { id: "whatsapp", icon: Phone, label: { en: "WhatsApp", sw: "WhatsApp" } },
-  { id: "mobile", icon: Truck, label: { en: "Mobile / Field Sales", sw: "Mauzo ya Kutembea" } },
-];
-
-const CUSTOMER_TYPES = [
-  { id: "individual", icon: Users, label: { en: "Individual Customers (B2C)", sw: "Wateja Binafsi (B2C)" } },
-  { id: "business", icon: Building2, label: { en: "Business Customers (B2B)", sw: "Biashara Nyingine (B2B)" } },
-];
-
-const PRICING_MODELS = [
-  { id: "standard", label: { en: "Standard Selling Price", sw: "Bei ya Kawaida" } },
-  { id: "retail_wholesale", label: { en: "Retail & Wholesale Pricing", sw: "Bei ya Rejareja & Jumla" } },
-  { id: "quantity", label: { en: "Quantity-Based Pricing", sw: "Bei kulingana na Idadi" } },
-  { id: "promotional", label: { en: "Promotional Pricing", sw: "Bei ya Punguzo/Ofa" } },
-  { id: "customer_specific", label: { en: "Customer-Specific Pricing", sw: "Bei Kulingana na Mteja" } },
-];
-
-const INVENTORY_MODELS = [
-  { id: "stock", label: { en: "Stock-based (I keep inventory)", sw: "Ninaweka mzigo/stoo" } },
-  { id: "partial", label: { en: "Partially stock-based", sw: "Nusu stoo, nusu oda" } },
-  { id: "order", label: { en: "Order-based (I source when ordered)", sw: "Mteja akiweka oda ndio natafuta" } },
-];
-
-const STOCK_LOCATIONS = [
-  { id: "shop", label: { en: "At the Shop", sw: "Dukani" } },
-  { id: "warehouse", label: { en: "In a Warehouse", sw: "Ghalani (Warehouse)" } },
-  { id: "multiple", label: { en: "Multiple Locations", sw: "Sehemu Mbalimbali" } },
-];
-
-const FULFILLMENT_METHODS = [
-  { id: "pickup", label: { en: "Customer Pickup", sw: "Mteja Kuchukua Dukani" } },
-  { id: "local_delivery", label: { en: "Local Delivery", sw: "Kufikisha Karibu (Mtaani/Wilayani)" } },
-  { id: "regional", label: { en: "Regional Delivery", sw: "Kufikisha Mkoani" } },
-  { id: "nationwide", label: { en: "Nationwide Delivery", sw: "Kufikisha Nchi Nzima" } },
-  { id: "courier", label: { en: "Third-party Courier", sw: "Kutuma kwa Basi/Ndege/Courier" } },
+const STOCK_QUESTIONS: { id: string; en: string; sw: string }[] = [
+  { id: "stock", en: "Yes, I keep stock in my shop", sw: "Ndiyo, ninaweka mzigo dukani" },
+  { id: "partial", en: "Some items in stock, others on order", sw: "Baadhi yangu dukani, nyingi kwa oda" },
+  { id: "order", en: "No stock — I source when a customer orders", sw: "Sina mzigo — natafuta mteja ameweka oda" },
 ];
 
 const SERVICE_COVERAGE = [
@@ -151,12 +116,6 @@ const CURRENCIES = [
   { id: "USD", label: "US Dollar (USD)", flag: "🇺🇸" },
 ];
 
-const LANGUAGES = [
-  { id: "Swahili", label: "Kiswahili", desc: "Kwa watumiaji wa Kiswahili" },
-  { id: "English", label: "English", desc: "For English speaking users" },
-  { id: "Both", label: "Both (Swahili & English)", desc: "Bilingual interface" },
-];
-
 export default function Onboarding() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -164,7 +123,7 @@ export default function Onboarding() {
   const { lang } = useI18n();
 
   const [step, setStep] = useState(1);
-  const totalSteps = 7;
+  const totalSteps = 4;
 
   const handleCancel = async () => {
     if (user?.id) {
@@ -181,23 +140,11 @@ export default function Onboarding() {
     // Step 1: Identity
     name: "",
     phone: "+255",
-    description: "",
     whatsapp: "",
-    email: "",
-    website: "",
-    legal: {
-      tin: "",
-      vrn: "",
-      licenseNumber: "",
-      registrationNumber: "",
-    },
     useAccountPhone: true,
-    
-    // Step 2: Classification
-    shopTypes: [] as string[],
+
+    // Step 2: Products & prices (everything the till needs)
     productCategories: [] as string[],
-    
-    // Step 3: Product Model
     productCapabilities: {
       hasVariants: false,
       sellsByQuantity: true,
@@ -206,18 +153,21 @@ export default function Onboarding() {
       sellsByVolume: false,
       sellsSetsOrPackages: false,
     },
-    
-    // Step 4: Selling Model
-    customerTypes: [] as string[],
-    salesChannels: [] as string[],
-    pricingModels: [] as string[],
-    
-    // Step 5: Operations
     inventoryModel: "stock",
-    stockLocations: [] as string[],
-    fulfillmentMethods: [] as string[],
-    
-    // Step 6: Location & Settings
+    currency: lang === 'sw' ? "TZS" : "USD",
+
+    // Step 3: Reach — optional, off by default
+    marketplace: false,
+    social: false,
+    description: "",
+    email: "",
+    website: "",
+    legal: {
+      tin: "",
+      vrn: "",
+      licenseNumber: "",
+      registrationNumber: "",
+    },
     country: "Tanzania",
     region: "",
     district: "",
@@ -225,9 +175,6 @@ export default function Onboarding() {
     lat: null as number | null,
     lon: null as number | null,
     serviceCoverage: [] as string[],
-    currency: lang === 'sw' ? "TZS" : "USD",
-    language: lang === 'sw' ? "Swahili" : "English",
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -305,16 +252,12 @@ export default function Onboarding() {
       toast.error(lang === 'sw' ? "Tafadhali jaza jina la duka na namba ya simu" : "Please enter shop name and phone");
       return;
     }
-    if (step === 2 && (form.shopTypes.length === 0 || form.productCategories.length === 0)) {
-      toast.error(lang === 'sw' ? "Tafadhali chagua aina ya duka na bidhaa" : "Please select shop type and product category");
+    if (step === 2 && form.productCategories.length === 0) {
+      toast.error(lang === 'sw' ? "Tafadhali chagua angalau kundi moja la bidhaa" : "Please pick at least one product category");
       return;
     }
-    if (step === 4 && (form.customerTypes.length === 0 || form.salesChannels.length === 0)) {
-      toast.error(lang === 'sw' ? "Tafadhali chagua aina za wateja na njia za mauzo" : "Please select customer types and sales channels");
-      return;
-    }
-    if (step === 6 && (!form.country || !form.region || !form.district)) {
-      toast.error(lang === 'sw' ? "Tafadhali jaza taarifa za nchi, mkoa na wilaya" : "Please fill in country, region and district");
+    if (step === 3 && form.marketplace && (!form.region || !form.district)) {
+      toast.error(lang === 'sw' ? "Tafadhali jaza mkoa na wilaya ili wanunuzi wakupate" : "Enter region and district so nearby buyers can find you");
       return;
     }
     
@@ -325,7 +268,7 @@ export default function Onboarding() {
     setStep(s => Math.max(s - 1, 1));
   };
 
-  const toggleArrayItem = (field: 'shopTypes' | 'productCategories' | 'customerTypes' | 'salesChannels' | 'pricingModels' | 'stockLocations' | 'fulfillmentMethods' | 'serviceCoverage', value: string) => {
+  const toggleArrayItem = (field: 'productCategories' | 'serviceCoverage', value: string) => {
     setForm(prev => {
       const current = prev[field] as string[];
       if (current.includes(value)) {
@@ -354,42 +297,45 @@ export default function Onboarding() {
 
     setSubmitting(true);
     try {
+      const sellsToBuyersOnline = form.marketplace;
+      const channels = ["physical"];
+      if (sellsToBuyersOnline) channels.push("marketplace");
+      if (form.social) channels.push("social", "whatsapp");
+
       const shopData = {
         name: form.name,
-        description: form.description,
         phone: form.phone,
         whatsappNumber: form.whatsapp,
-        email: form.email,
-        website: form.website,
-        legal: form.legal,
         ownerId: user.id,
-        
-        shopTypes: form.shopTypes,
+
         productCategories: form.productCategories,
-        
         productCapabilities: form.productCapabilities,
-        
-        customerTypes: form.customerTypes,
-        salesChannels: form.salesChannels,
-        pricingModels: form.pricingModels,
-        
         inventoryModel: form.inventoryModel,
-        stockLocations: form.stockLocations,
-        fulfillmentMethods: form.fulfillmentMethods,
-        
-        country: form.country,
-        region: form.region,
-        district: form.district,
-        location: `${form.district}, ${form.region}`,
-        address: form.address,
-        lat: form.lat || undefined,
-        lon: form.lon || undefined,
-        serviceCoverage: form.serviceCoverage,
-        
         currency: form.currency,
-        language: form.language,
-        timezone: form.timezone,
-        
+
+        // Reach fields: only collected when the merchant asked for the directory.
+        description: sellsToBuyersOnline ? form.description : "",
+        email: sellsToBuyersOnline ? form.email : "",
+        website: sellsToBuyersOnline ? form.website : "",
+        legal: form.legal,
+        country: sellsToBuyersOnline ? form.country : "",
+        region: sellsToBuyersOnline ? form.region : "",
+        district: sellsToBuyersOnline ? form.district : "",
+        location: sellsToBuyersOnline ? `${form.district}, ${form.region}` : "",
+        address: sellsToBuyersOnline ? form.address : "",
+        lat: sellsToBuyersOnline && form.lat ? form.lat : undefined,
+        lon: sellsToBuyersOnline && form.lon ? form.lon : undefined,
+        serviceCoverage: sellsToBuyersOnline ? form.serviceCoverage : [],
+
+        // No longer asked in the wizard — sensible defaults, editable in Shop Setup.
+        customerTypes: ["individual"],
+        pricingModels: ["standard"],
+        stockLocations: form.inventoryModel === "order" ? [] : ["shop"],
+        fulfillmentMethods: ["pickup"],
+        salesChannels: channels,
+        language: lang === 'sw' ? "Swahili" : "English",
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+
         setupStatus: "completed" as const,
         isPublic: false,
       };
@@ -507,360 +453,284 @@ export default function Onboarding() {
             
             {/* Step 1: Shop Identity */}
             {step === 1 && (
-              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{lang === 'sw' ? "Jina la Duka *" : "Shop Name *"}</label>
-                    <Input placeholder={lang === 'sw' ? "Mfano: Baraka Store" : "e.g. Baraka Store"} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="text-lg py-6" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{lang === 'sw' ? "Namba ya Simu ya Duka *" : "Shop Phone Number *"}</label>
-                    <Input placeholder="+255..." value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="text-lg py-6" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{lang === 'sw' ? "Maelezo ya Duka (Si lazima)" : "Shop Description (Optional)"}</label>
-                    <Textarea placeholder={lang === 'sw' ? "Tunauza..." : "We sell..."} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="min-h-[100px] resize-none" maxLength={300} />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">WhatsApp (Optional)</label>
-                      <Input placeholder="+255..." value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Email (Optional)</label>
-                      <Input placeholder="shop@example.com" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Website (Optional)</label>
-                    <Input placeholder="https://" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} />
-                  </div>
-
-                  <Accordion type="single" collapsible className="w-full mt-4 border border-border rounded-xl px-4 bg-muted/30">
-                    <AccordionItem value="legal" className="border-none">
-                      <AccordionTrigger className="hover:no-underline py-4">
-                        <div className="flex items-center gap-2 text-sm font-semibold">
-                          <ShieldPlus className="w-4 h-4 text-primary" />
-                          {lang === 'sw' ? "Taarifa za Kisheria (Si lazima sasa)" : "Advanced Legal Details (Optional)"}
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="space-y-4 pt-2 pb-4">
-                        <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900 text-orange-800 dark:text-orange-300 text-xs p-3 rounded-lg flex gap-2 items-start font-medium">
-                          <span className="text-lg leading-none">💡</span>
-                          <p>{lang === 'sw' 
-                            ? "Dokezo: Kuweka TIN au Leseni kunakupa alama ya 'Muuzaji Aliyehakikiwa' na kufungua huduma za B2B baadaye." 
-                            : "Tip: Providing your TIN or Business License unlocks the 'Verified Seller' badge and allows you to sell to B2B corporate customers."}</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">TIN Number</label>
-                            <Input placeholder="000-000-000" value={form.legal.tin} onChange={(e) => setForm({ ...form, legal: { ...form.legal, tin: e.target.value } })} />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">VRN Number</label>
-                            <Input placeholder="..." value={form.legal.vrn} onChange={(e) => setForm({ ...form, legal: { ...form.legal, vrn: e.target.value } })} />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">{lang === 'sw' ? "Leseni ya Biashara" : "Business License"}</label>
-                            <Input placeholder="..." value={form.legal.licenseNumber} onChange={(e) => setForm({ ...form, legal: { ...form.legal, licenseNumber: e.target.value } })} />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">{lang === 'sw' ? "Namba ya Usajili (Brela)" : "Company Reg No"}</label>
-                            <Input placeholder="..." value={form.legal.registrationNumber} onChange={(e) => setForm({ ...form, legal: { ...form.legal, registrationNumber: e.target.value } })} />
-                          </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2 italic">
-                          {lang === 'sw' ? "Huna hizi taarifa sasa? Usijali, unaweza kuziruka na kuziweka baadaye kwenye Settings." : "You don't have these right now? No problem, you can always add them later in your Shop Settings."}
-                        </p>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
+              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{lang === 'sw' ? "Jina la Duka *" : "Shop Name *"}</label>
+                  <Input placeholder={lang === 'sw' ? "Mfano: Baraka Store" : "e.g. Baraka Store"} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="text-lg py-6" autoFocus />
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">{lang === 'sw' ? "Namba ya Simu *" : "Shop Phone *"}</label>
+                    <Input placeholder="+255..." value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">{lang === 'sw' ? "WhatsApp (Si lazima)" : "WhatsApp (Optional)"}</label>
+                    <Input placeholder="+255..." value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
+                  </div>
+                </div>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {lang === 'sw'
+                    ? "Hizi ndio pekee zinazohitajika. Maelezo, anwani na nyaraka za kisheria unaweza kuongeza baadaye."
+                    : "These are all we need. Description, address and legal documents can be added any time."}
+                </p>
               </motion.div>
             )}
 
-            {/* Step 2: Classification */}
+            {/* Step 2: Products & Prices */}
             {step === 2 && (
-              <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-                
-                <div className="space-y-4">
-                  <label className="text-sm font-bold">{lang === 'sw' ? "Aina ya Duka (Chagua zinazofaa) *" : "Shop Type (Select applicable) *"}</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {SHOP_TYPES.map((type) => {
-                      const isSelected = form.shopTypes.includes(type.id);
-                      return (
-                        <div key={type.id} onClick={() => toggleArrayItem('shopTypes', type.id)} className={cn("p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-3", isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}> 
-                          <type.icon className={cn("w-5 h-5", isSelected ? "text-primary" : "text-muted-foreground")} />
-                          <span className={cn("font-medium", isSelected ? "text-foreground" : "text-muted-foreground")}>{lang === 'sw' ? type.label.sw : type.label.en}</span>
-                          {isSelected && <CheckCircle2 className="w-5 h-5 ml-auto text-primary" />}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+              <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-7">
 
-                <div className="space-y-4">
-                  <label className="text-sm font-bold">{lang === 'sw' ? "Kundi la Bidhaa *" : "Product Category *"}</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="space-y-3">
+                  <label className="text-sm font-bold">{lang === 'sw' ? "Unauza nini? (chagua yote yanayohusika) *" : "What do you sell? (pick all that apply) *"}</label>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                     {PRODUCT_CATEGORIES.map((cat) => {
                       const isSelected = form.productCategories.includes(cat.id);
                       return (
-                        <div key={cat.id} onClick={() => toggleArrayItem('productCategories', cat.id)} className={cn("p-3 rounded-xl border-2 cursor-pointer transition-all flex flex-col items-center text-center gap-2", isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}> 
-                          <cat.icon className={cn("w-6 h-6", isSelected ? "text-primary" : "text-muted-foreground")} />
-                          <span className={cn("text-xs font-medium", isSelected ? "text-foreground" : "text-muted-foreground")}>{lang === 'sw' ? cat.label.sw : cat.label.en}</span>
+                        <div key={cat.id} onClick={() => toggleArrayItem('productCategories', cat.id)} className={cn("rounded-xl border-2 p-2.5 cursor-pointer transition-all flex flex-col items-center text-center gap-1.5", isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
+                          <cat.icon className={cn("w-5 h-5", isSelected ? "text-primary" : "text-muted-foreground")} />
+                          <span className={cn("text-[0.6875rem] font-medium leading-tight", isSelected ? "text-foreground" : "text-muted-foreground")}>{lang === 'sw' ? cat.label.sw : cat.label.en}</span>
                         </div>
                       );
                     })}
                   </div>
                 </div>
-              </motion.div>
-            )}
 
-            {/* Step 3: Product Model */}
-            {step === 3 && (
-              <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div onClick={() => toggleProductCapability('hasVariants')} className={cn("p-4 rounded-xl border-2 cursor-pointer transition-all", form.productCapabilities.hasVariants ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-                    <h3 className="font-bold mb-1">Products with Variations</h3>
-                    <p className="text-sm text-muted-foreground">Different sizes, colors, or materials (e.g. Clothes, Shoes)</p>
-                  </div>
-                  <div onClick={() => toggleProductCapability('sellsByQuantity')} className={cn("p-4 rounded-xl border-2 cursor-pointer transition-all", form.productCapabilities.sellsByQuantity ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-                    <h3 className="font-bold mb-1">Sold by Quantity</h3>
-                    <p className="text-sm text-muted-foreground">Standard items sold in countable units (e.g. Phones, Chairs)</p>
-                  </div>
-                  <div onClick={() => toggleProductCapability('sellsByWeight')} className={cn("p-4 rounded-xl border-2 cursor-pointer transition-all", form.productCapabilities.sellsByWeight ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-                    <h3 className="font-bold mb-1">Sold by Weight</h3>
-                    <p className="text-sm text-muted-foreground">Items weighed per kg/g (e.g. Sugar, Meat, Vegetables)</p>
-                  </div>
-                  <div onClick={() => toggleProductCapability('sellsByLength')} className={cn("p-4 rounded-xl border-2 cursor-pointer transition-all", form.productCapabilities.sellsByLength ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-                    <h3 className="font-bold mb-1">Sold by Length</h3>
-                    <p className="text-sm text-muted-foreground">Items measured in meters (e.g. Fabrics, Cables, Pipes)</p>
-                  </div>
-                  <div onClick={() => toggleProductCapability('sellsByVolume')} className={cn("p-4 rounded-xl border-2 cursor-pointer transition-all", form.productCapabilities.sellsByVolume ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-                    <h3 className="font-bold mb-1">Sold by Volume</h3>
-                    <p className="text-sm text-muted-foreground">Liquids in Liters/ml (e.g. Cooking Oil, Paint)</p>
-                  </div>
-                  <div onClick={() => toggleProductCapability('sellsSetsOrPackages')} className={cn("p-4 rounded-xl border-2 cursor-pointer transition-all", form.productCapabilities.sellsSetsOrPackages ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-                    <h3 className="font-bold mb-1">Sold as Sets / Packages</h3>
-                    <p className="text-sm text-muted-foreground">Items bundled together (e.g. Furniture sets, Gift baskets)</p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 4: Selling Model */}
-            {step === 4 && (
-              <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-                
-                <div className="space-y-4">
-                  <label className="text-sm font-bold">{lang === 'sw' ? "Aina ya Wateja *" : "Customer Types *"}</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {CUSTOMER_TYPES.map(ct => (
-                      <div key={ct.id} onClick={() => toggleArrayItem('customerTypes', ct.id)} className={cn("p-3 rounded-xl border-2 cursor-pointer flex items-center gap-3", form.customerTypes.includes(ct.id) ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-                        <ct.icon className={cn("w-5 h-5", form.customerTypes.includes(ct.id) ? "text-primary" : "text-muted-foreground")} />
-                        <span className="font-medium text-sm">{lang === 'sw' ? ct.label.sw : ct.label.en}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-sm font-bold">{lang === 'sw' ? "Njia za Mauzo *" : "Sales Channels *"}</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {SALES_CHANNELS.map(sc => (
-                      <div key={sc.id} onClick={() => toggleArrayItem('salesChannels', sc.id)} className={cn("p-3 rounded-xl border-2 cursor-pointer flex items-center gap-3", form.salesChannels.includes(sc.id) ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-                        <sc.icon className={cn("w-5 h-5", form.salesChannels.includes(sc.id) ? "text-primary" : "text-muted-foreground")} />
-                        <span className="font-medium text-xs">{lang === 'sw' ? sc.label.sw : sc.label.en}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-sm font-bold">{lang === 'sw' ? "Mfumo wa Bei (Si lazima)" : "Pricing Model (Optional)"}</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {PRICING_MODELS.map(pm => {
-                      // Only show wholesale pricing if shop is wholesale or distributor
-                      if (pm.id === 'retail_wholesale' && !form.shopTypes.some(t => ['wholesale', 'distributor', 'manufacturer', 'importer'].includes(t))) return null;
+                <div className="space-y-3">
+                  <label className="text-sm font-bold">{lang === 'sw' ? "Bidhaa hizi huuza vipi?" : "How do you measure your products?"}</label>
+                  <div className="flex flex-wrap gap-2">
+                    {SELLING_UNITS.map((u) => {
+                      const on = form.productCapabilities[u.key];
                       return (
-                        <div key={pm.id} onClick={() => toggleArrayItem('pricingModels', pm.id)} className={cn("p-3 rounded-xl border-2 cursor-pointer flex items-center gap-3", form.pricingModels.includes(pm.id) ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-                          <span className="font-medium text-sm">{lang === 'sw' ? pm.label.sw : pm.label.en}</span>
+                        <div key={u.key} onClick={() => toggleProductCapability(u.key)} className={cn("rounded-full border-2 px-3.5 py-1.5 text-xs font-medium cursor-pointer transition-all", on ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-primary/50")}>
+                          {lang === 'sw' ? u.sw : u.en}
                         </div>
-                      )
+                      );
                     })}
                   </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 5: Operations */}
-            {step === 5 && (
-              <motion.div key="step5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-                
-                <div className="space-y-4">
-                  <label className="text-sm font-bold">{lang === 'sw' ? "Mfumo wa Stoo" : "Inventory Model"}</label>
-                  <div className="grid grid-cols-1 gap-3">
-                    {INVENTORY_MODELS.map(im => (
-                      <div key={im.id} onClick={() => setForm({...form, inventoryModel: im.id})} className={cn("p-3 rounded-xl border-2 cursor-pointer flex items-center gap-3", form.inventoryModel === im.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-                        <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", form.inventoryModel === im.id ? "border-primary" : "border-muted-foreground")}>
-                          {form.inventoryModel === im.id && <div className="w-2 h-2 rounded-full bg-primary" />}
-                        </div>
-                        <span className="font-medium text-sm">{lang === 'sw' ? im.label.sw : im.label.en}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {lang === 'sw' ? "Hivi ndivyo POS itakavyohesabu bei — unaweza kuongeza vipimo zaidi kwenye bidhaa moja baadaye." : "This is how the till calculates prices — you can still mix units per product later."}
+                  </p>
                 </div>
 
-                {(form.inventoryModel === 'stock' || form.inventoryModel === 'partial') && (
-                  <div className="space-y-4">
-                    <label className="text-sm font-bold">{lang === 'sw' ? "Eneo la Stoo" : "Stock Locations"}</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {STOCK_LOCATIONS.map(sl => (
-                        <div key={sl.id} onClick={() => toggleArrayItem('stockLocations', sl.id)} className={cn("p-3 rounded-xl border-2 cursor-pointer flex items-center justify-center text-center", form.stockLocations.includes(sl.id) ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-                          <span className="font-medium text-sm">{lang === 'sw' ? sl.label.sw : sl.label.en}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1 border-t border-dashed border-border">
+                  <div className="space-y-3 pt-4">
+                    <label className="text-sm font-bold">{lang === 'sw' ? "Una stoo?" : "Do you keep stock?"}</label>
+                    <div className="space-y-2">
+                      {STOCK_QUESTIONS.map((q) => (
+                        <div key={q.id} onClick={() => setForm({ ...form, inventoryModel: q.id })} className={cn("rounded-xl border-2 p-3 cursor-pointer flex items-center gap-3", form.inventoryModel === q.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
+                          <div className={cn("w-4 h-4 shrink-0 rounded-full border-2 flex items-center justify-center", form.inventoryModel === q.id ? "border-primary" : "border-muted-foreground")}>
+                            {form.inventoryModel === q.id && <div className="w-2 h-2 rounded-full bg-primary" />}
+                          </div>
+                          <span className={cn("text-sm font-medium", form.inventoryModel === q.id ? "text-foreground" : "text-muted-foreground")}>{lang === 'sw' ? q.sw : q.en}</span>
                         </div>
                       ))}
                     </div>
                   </div>
-                )}
-
-                <div className="space-y-4">
-                  <label className="text-sm font-bold">{lang === 'sw' ? "Njia za Ufikishaji (Fulfillment)" : "Fulfillment Methods"}</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {FULFILLMENT_METHODS.map(fm => (
-                      <div key={fm.id} onClick={() => toggleArrayItem('fulfillmentMethods', fm.id)} className={cn("p-3 rounded-xl border-2 cursor-pointer flex items-center gap-3", form.fulfillmentMethods.includes(fm.id) ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-                        <span className="font-medium text-sm">{lang === 'sw' ? fm.label.sw : fm.label.en}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 6: Location & Settings */}
-            {step === 6 && (
-              <motion.div key="step6" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{lang === 'sw' ? "Nchi *" : "Country *"}</label>
-                    <Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{lang === 'sw' ? "Mkoa *" : "Region / State *"}</label>
-                    <Input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{lang === 'sw' ? "Wilaya/Mji *" : "District / City *"}</label>
-                    <Input value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{lang === 'sw' ? "Anwani Kamili" : "Full Address"}</label>
-                    <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-                  </div>
-                </div>
-
-
-                <div className="space-y-2 pt-4 border-t">
-                  <label className="text-sm font-bold">{lang === 'sw' ? "Chagua Mahali Kwenye Ramani" : "Pick Location on Map"}</label>
-                  <p className="text-xs text-muted-foreground">{lang === 'sw' ? "Bofya kwenye ramani kuweka alama ya duka lako." : "Click on the map to set your shop's exact location."}</p>
-                  <div className="h-64 w-full rounded-xl overflow-hidden border border-border z-0 relative">
-                    <MapContainer center={form.lat && form.lon ? [form.lat, form.lon] : [-6.7924, 39.2083]} zoom={13} scrollWheelZoom={true} style={{ height: "100%", width: "100%", zIndex: 0 }}>
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      />
-                      <LocationMarker form={form} setForm={setForm} />
-                      <MapUpdater lat={form.lat} lon={form.lon} />
-                    </MapContainer>
-                  </div>
-                  <div className="pt-2">
-                    <Button type="button" variant="outline" onClick={detectLocation} disabled={locating} className="w-full">
-                      {locating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LocateFixed className="w-4 h-4 mr-2" />}
-                      {form.lat ? (lang === 'sw' ? "Sasisha Kutoka GPS" : "Update from GPS") : (lang === 'sw' ? "Tafuta Kutoka GPS" : "Get from GPS")}
-                    </Button>
-                  </div>
-                </div>
-
-
-                <div className="space-y-4 pt-4 border-t">
-                  <label className="text-sm font-bold">{lang === 'sw' ? "Eneo Unalohudumia" : "Service Coverage"}</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {SERVICE_COVERAGE.map(sc => (
-                      <div key={sc.id} onClick={() => toggleArrayItem('serviceCoverage', sc.id)} className={cn("p-2 rounded-xl border cursor-pointer text-center text-sm", form.serviceCoverage.includes(sc.id) ? "border-primary bg-primary/5 font-bold text-primary" : "border-border hover:border-primary/50 text-muted-foreground")}>
-                        {lang === 'sw' ? sc.label.sw : sc.label.en}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{lang === 'sw' ? "Sarafu" : "Currency"}</label>
-                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+                  <div className="space-y-3 pt-4">
+                    <label className="text-sm font-bold">{lang === 'sw' ? "Sarafu" : "Currency"}</label>
+                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
                       {CURRENCIES.map(c => <option key={c.id} value={c.id}>{c.flag} {c.label}</option>)}
                     </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">{lang === 'sw' ? "Lugha" : "Language"}</label>
-                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
-                      {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
-                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      {lang === 'sw' ? "Bei zote za POS na ripiti hutumia sarafu hii." : "Every till price and report uses this currency."}
+                    </p>
                   </div>
                 </div>
               </motion.div>
             )}
 
-            {/* Step 7: Review */}
-            {step === 7 && (
-              <motion.div key="step7" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                
-                <div className="bg-muted/50 rounded-xl p-4 space-y-4 text-sm">
-                  <div className="flex justify-between items-start border-b pb-2">
-                    <div>
-                      <h4 className="font-bold text-muted-foreground mb-1">Shop Identity</h4>
-                      <p className="font-medium text-lg">{form.name}</p>
-                      <p className="text-muted-foreground">{form.phone}</p>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => setStep(1)}>Edit</Button>
+            {/* Step 3: Reach (optional) */}
+            {step === 3 && (
+              <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+
+                <div onClick={() => setForm({ ...form, marketplace: !form.marketplace })} className={cn("rounded-xl border-2 p-4 cursor-pointer transition-all flex items-start gap-3", form.marketplace ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
+                  <ShoppingCart className={cn("w-5 h-5 mt-0.5 shrink-0", form.marketplace ? "text-primary" : "text-muted-foreground")} />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-bold">{lang === 'sw' ? "Onyesha duka langu kwenye orodha ya Twende Duka" : "List my shop in the Twende Duka directory"}</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {lang === 'sw' ? "Wanunuzi wa karibu hukupata kwenye ramani na kutafuta bidhaa zako." : "Nearby buyers find you on the map and search your products."}
+                    </p>
                   </div>
-                  
-                  <div className="flex justify-between items-start border-b pb-2">
-                    <div>
-                      <h4 className="font-bold text-muted-foreground mb-1">Business Model</h4>
-                      <p>{form.shopTypes.map(t => SHOP_TYPES.find(x => x.id === t)?.label.en).join(", ") || "None"}</p>
-                      <p className="mt-1">{form.productCategories.map(t => PRODUCT_CATEGORIES.find(x => x.id === t)?.label.en).join(", ") || "None"}</p>
+                  {form.marketplace && <CheckCircle2 className="w-5 h-5 shrink-0 text-primary" />}
+                </div>
+
+                <div onClick={() => setForm({ ...form, social: !form.social })} className={cn("rounded-xl border-2 p-4 cursor-pointer transition-all flex items-start gap-3", form.social ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
+                  <Smartphone className={cn("w-5 h-5 mt-0.5 shrink-0", form.social ? "text-primary" : "text-muted-foreground")} />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-bold">{lang === 'sw' ? "Nipeuat bidhaa kwenye mitandao ya kijamii" : "Post my products to social media"}</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {lang === 'sw' ? "Facebook, Instagram na TikTok — huunganishwa baada ya duka kuundwa." : "Facebook, Instagram and TikTok — connected from Marketing once your shop exists."}
+                    </p>
+                  </div>
+                  {form.social && <CheckCircle2 className="w-5 h-5 shrink-0 text-primary" />}
+                </div>
+
+                {!form.marketplace && !form.social && (
+                  <div className="rounded-xl border border-dashed border-border bg-muted/40 p-4">
+                    <p className="text-sm font-medium">{lang === 'sw' ? "Sawa — tutaanza na kasha pekee." : "No problem — we'll start with the till only."}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {lang === 'sw' ? "Ukiwa uko tayari, washa usajili wa umma kutoka Dashibodi › Mipangilio ya Duka." : "When you're ready, turn on public listing from Dashboard › Shop Setup."}
+                    </p>
+                  </div>
+                )}
+
+                {form.marketplace && (
+                  <div className="space-y-5 rounded-xl border border-border bg-background p-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold">{lang === 'sw' ? "Duka lako lipo wapi? *" : "Where is your shop? *"}</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">{lang === 'sw' ? "Mkoa" : "Region"}</label>
+                          <Input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder={lang === 'sw' ? "Mfano: Dar es Salaam" : "e.g. Dar es Salaam"} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">{lang === 'sw' ? "Wilaya / Mji" : "District / City"}</label>
+                          <Input value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} placeholder={lang === 'sw' ? "Mfano: Ilala" : "e.g. Ilala"} />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 pt-1">
+                        <label className="text-xs font-medium text-muted-foreground">{lang === 'sw' ? "Anwani kamili (Si lazima)" : "Full address (Optional)"}</label>
+                        <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={lang === 'sw' ? "Mtaa, jengo, nambari ya mlango" : "Street, building, door number"} />
+                      </div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setStep(2)}>Edit</Button>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold">{lang === 'sw' ? "Weka alama kwenye ramani" : "Pin your shop on the map"}</label>
+                      <div className="relative h-56 w-full overflow-hidden rounded-xl border border-border z-0">
+                        <MapContainer center={form.lat && form.lon ? [form.lat, form.lon] : [-6.7924, 39.2083]} zoom={13} scrollWheelZoom={true} style={{ height: "100%", width: "100%", zIndex: 0 }}>
+                          <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          />
+                          <LocationMarker form={form} setForm={setForm} />
+                          <MapUpdater lat={form.lat} lon={form.lon} />
+                        </MapContainer>
+                      </div>
+                      <Button type="button" variant="outline" onClick={detectLocation} disabled={locating} className="w-full">
+                        {locating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LocateFixed className="w-4 h-4 mr-2" />}
+                        {form.lat ? (lang === 'sw' ? "Sasisha Kutoka GPS" : "Update from GPS") : (lang === 'sw' ? "Tafuta Mahaliangu" : "Find my location")}
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold">{lang === 'sw' ? "Eneo unalohudumia" : "Area you serve"}</label>
+                      <div className="flex flex-wrap gap-2">
+                        {SERVICE_COVERAGE.map(sc => (
+                          <div key={sc.id} onClick={() => toggleArrayItem('serviceCoverage', sc.id)} className={cn("rounded-full border-2 px-3.5 py-1.5 text-xs font-medium cursor-pointer transition-all", form.serviceCoverage.includes(sc.id) ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-primary/50")}>
+                            {lang === 'sw' ? sc.label.sw : sc.label.en}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold">{lang === 'sw' ? "Maelezo mafupi ya duka" : "Short description"}</label>
+                      <Textarea placeholder={lang === 'sw' ? "Tunauza..." : "We sell..."} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="min-h-[80px] resize-none" maxLength={300} />
+                      <p className="text-xs text-muted-foreground">{lang === 'sw' ? "Hii huonekana kwenye matokeo ya utafutaji na ukurasa wa duka lako." : "This shows in search results and on your public shop page."}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">{lang === 'sw' ? "Barua pepe (Si lazima)" : "Email (Optional)"}</label>
+                        <Input placeholder="shop@example.com" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">{lang === 'sw' ? "Tovuti (Si lazima)" : "Website (Optional)"}</label>
+                        <Input placeholder="https://" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} />
+                      </div>
+                    </div>
+
+                    <Accordion type="single" collapsible className="w-full border border-border rounded-xl px-4 bg-muted/30">
+                      <AccordionItem value="legal" className="border-none">
+                        <AccordionTrigger className="hover:no-underline py-4">
+                          <div className="flex items-center gap-2 text-sm font-semibold">
+                            <ShieldPlus className="w-4 h-4 text-primary" />
+                            {lang === 'sw' ? "Nyaraka za kisheria (Si lazima)" : "Legal documents (Optional)"}
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="space-y-4 pt-2 pb-4">
+                          <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900 text-orange-800 dark:text-orange-300 text-xs p-3 rounded-lg flex gap-2 items-start font-medium">
+                            <span className="text-lg leading-none">💡</span>
+                            <p>{lang === 'sw'
+                              ? "Dokezo: Kuweka TIN au Leseni kunakupa alama ya 'Muuzaji Aliyehakikiwa' na kufungua huduma za B2B baadaye."
+                              : "Tip: Providing your TIN or Business License unlocks the 'Verified Seller' badge and allows you to sell to B2B corporate customers."}</p>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">TIN Number</label>
+                              <Input placeholder="000-000-000" value={form.legal.tin} onChange={(e) => setForm({ ...form, legal: { ...form.legal, tin: e.target.value } })} />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">VRN Number</label>
+                              <Input placeholder="..." value={form.legal.vrn} onChange={(e) => setForm({ ...form, legal: { ...form.legal, vrn: e.target.value } })} />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">{lang === 'sw' ? "Leseni ya Biashara" : "Business License"}</label>
+                              <Input placeholder="..." value={form.legal.licenseNumber} onChange={(e) => setForm({ ...form, legal: { ...form.legal, licenseNumber: e.target.value } })} />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">{lang === 'sw' ? "Namba ya Usajili (Brela)" : "Company Reg No"}</label>
+                              <Input placeholder="..." value={form.legal.registrationNumber} onChange={(e) => setForm({ ...form, legal: { ...form.legal, registrationNumber: e.target.value } })} />
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2 italic">
+                            {lang === 'sw' ? "Huna hizi taarifa sasa? Usijali, unaweza kuziweka baadaye kwenye Settings." : "You don't have these right now? No problem, you can always add them later in your Shop Settings."}
+                          </p>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Step 4: Review */}
+            {step === 4 && (
+              <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+
+                <div className="bg-muted/50 rounded-xl p-4 space-y-3 text-sm">
+                  <div className="flex justify-between items-start border-b pb-3">
+                    <div>
+                      <h4 className="font-bold text-muted-foreground mb-1">{lang === 'sw' ? "Duka" : "Shop"}</h4>
+                      <p className="font-medium text-lg leading-tight">{form.name || "—"}</p>
+                      <p className="text-muted-foreground">{form.phone}{form.whatsapp ? ` · WhatsApp ${form.whatsapp}` : ""}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setStep(1)}>{lang === 'sw' ? "Badilisha" : "Edit"}</Button>
                   </div>
 
-                  <div className="flex justify-between items-start border-b pb-2">
+                  <div className="flex justify-between items-start border-b pb-3">
                     <div>
-                      <h4 className="font-bold text-muted-foreground mb-1">Selling & Customers</h4>
-                      <p>Customers: {form.customerTypes.map(t => CUSTOMER_TYPES.find(x => x.id === t)?.label.en).join(", ")}</p>
-                      <p>Channels: {form.salesChannels.map(t => SALES_CHANNELS.find(x => x.id === t)?.label.en).join(", ")}</p>
+                      <h4 className="font-bold text-muted-foreground mb-1">{lang === 'sw' ? "Kasha na Bidhaa" : "Till & Products"}</h4>
+                      <p className="text-muted-foreground">{form.productCategories.map(t => PRODUCT_CATEGORIES.find(x => x.id === t)?.label[lang === 'sw' ? 'sw' : 'en']).join(", ") || "—"}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {SELLING_UNITS.filter(u => form.productCapabilities[u.key]).map(u => lang === 'sw' ? u.sw : u.en).join(" · ") || "—"}
+                      </p>
+                      <p className="mt-1 text-xs">{STOCK_QUESTIONS.find(x => x.id === form.inventoryModel)?.[lang === 'sw' ? 'sw' : 'en']} · {form.currency}</p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setStep(4)}>Edit</Button>
-                  </div>
-
-                  <div className="flex justify-between items-start border-b pb-2">
-                    <div>
-                      <h4 className="font-bold text-muted-foreground mb-1">Operations & Fulfillment</h4>
-                      <p>Inventory: {INVENTORY_MODELS.find(x => x.id === form.inventoryModel)?.label.en}</p>
-                      <p>Methods: {form.fulfillmentMethods.map(t => FULFILLMENT_METHODS.find(x => x.id === t)?.label.en).join(", ") || "None"}</p>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => setStep(5)}>Edit</Button>
+                    <Button variant="ghost" size="sm" onClick={() => setStep(2)}>{lang === 'sw' ? "Badilisha" : "Edit"}</Button>
                   </div>
 
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-bold text-muted-foreground mb-1">Location</h4>
-                      <p>{form.district}, {form.region}, {form.country}</p>
+                      <h4 className="font-bold text-muted-foreground mb-1">{lang === 'sw' ? "Mawasiliano" : "Reach"}</h4>
+                      <p className="text-muted-foreground">
+                        {form.marketplace
+                          ? `${lang === 'sw' ? "Orodha ya umma" : "Public directory"}: ${form.district}, ${form.region}${form.lat ? ` · ${lang === 'sw' ? "ameweka alama" : "pinned"}` : ""}`
+                          : (lang === 'sw' ? "Duka binafsi — halionekani kwenye orodha" : "Private shop — not listed in the directory")}
+                      </p>
+                      <p className="mt-1 text-muted-foreground">
+                        {form.social ? (lang === 'sw' ? "Mitandao ya kijamii: unganisha kwenye Marketing" : "Social media: connect in Marketing") : (lang === 'sw' ? "Hakuna mitandao ya kijamii" : "No social posting")}
+                      </p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setStep(6)}>Edit</Button>
+                    <Button variant="ghost" size="sm" onClick={() => setStep(3)}>{lang === 'sw' ? "Badilisha" : "Edit"}</Button>
                   </div>
                 </div>
+
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {lang === 'sw'
+                    ? "Duka lako litaundwa mara moja ubofya kitufe haki. Usajili wa umma hukaguliwa na timu ya Twende Duka kabla ya kuanza kuonekana."
+                    : "Your shop is created as soon as you hit the button. Public listing is reviewed by the Twende Duka team before it goes live."}
+                </p>
               </motion.div>
             )}
 
