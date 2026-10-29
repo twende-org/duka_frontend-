@@ -335,6 +335,7 @@ const translations = {
   "auth.error.unauthorizedDomain": { sw: "Huwezi kuingia kwenye mfumo kupitia anwani hii.", en: "This domain is not authorized for Google sign-in." },
   "auth.error.googleNotConfigured": { sw: "Kuingia kwa Google hakujasanidiwa bado.", en: "Google sign-in is not configured yet." },
   "auth.error.googleTokenInvalid": { sw: "Kuingia kwa Google hakuthibitishwa. Tafadhali jaribu tena.", en: "Google sign-in could not be verified. Please try again." },
+  "auth.google.signIn": { sw: "Ingia kwa Google", en: "Sign in with Google" },
   "auth.google.notConfigured": { sw: "Kuingia kwa Google hakujasanidiwa kwenye mfumo huu. Tafadhali wasiliana na msimamizi.", en: "Google sign-in is not configured on this deployment. Please contact the administrator." },
   "auth.google.loadFailed": { sw: "Imeshindwa kupakia kitufe cha Google. Angalia mtandao wako na ujaribu tena.", en: "Could not load the Google sign-in button. Check your connection and try again." },
   "auth.error.unknown": { sw: "Hitilafu isiyojulikana imetokea.", en: "An unknown error occurred." },
