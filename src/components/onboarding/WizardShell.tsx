@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Check, Store, ChevronLeft, ChevronRight, Lightbulb, LifeBuoy } from "lucide-react";
+import { Check, Store, ChevronLeft, ChevronRight, Lightbulb, LifeBuoy, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
@@ -38,7 +38,7 @@ export default function WizardShell({
   onCancel,
   children,
 }: WizardShellProps) {
-  const { lang } = useI18n();
+  const { lang, toggleLang } = useI18n();
   const meta = stepMeta[step - 1];
   const L = (v: { en: string; sw: string }) => (lang === "sw" ? v.sw : v.en);
   const isLast = step === totalSteps;
@@ -157,6 +157,16 @@ export default function WizardShell({
           {/* Right question pane */}
           <section className="flex min-w-0 flex-1 flex-col bg-muted/30">
             <div className="flex-1 overflow-y-auto p-6 md:p-10 scrollbar-hide">
+              <div className="mb-5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={toggleLang}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-bold text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                >
+                  <Languages className="h-3.5 w-3.5" />
+                  {lang === "sw" ? "English" : "Kiswahili"}
+                </button>
+              </div>
               <motion.h1
                 key={`q-${step}`}
                 initial={{ opacity: 0, y: 10 }}

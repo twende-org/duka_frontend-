@@ -109,11 +109,11 @@ const SERVICE_COVERAGE = [
 ];
 
 const CURRENCIES = [
-  { id: "TZS", label: "Tanzanian Shilling (TZS)", flag: "🇹🇿" },
-  { id: "KES", label: "Kenyan Shilling (KES)", flag: "🇰🇪" },
-  { id: "UGX", label: "Ugandan Shilling (UGX)", flag: "🇺🇬" },
-  { id: "RWF", label: "Rwandan Franc (RWF)", flag: "🇷🇼" },
-  { id: "USD", label: "US Dollar (USD)", flag: "🇺🇸" },
+  { id: "TZS", label: { en: "Tanzanian Shilling (TZS)", sw: "Shilingi ya Tanzania (TZS)" }, flag: "🇹🇿" },
+  { id: "KES", label: { en: "Kenyan Shilling (KES)", sw: "Shilingi ya Kenya (KES)" }, flag: "🇰🇪" },
+  { id: "UGX", label: { en: "Ugandan Shilling (UGX)", sw: "Shilingi ya Uganda (UGX)" }, flag: "🇺🇬" },
+  { id: "RWF", label: { en: "Rwandan Franc (RWF)", sw: "Faranga ya Rwanda (RWF)" }, flag: "🇷🇼" },
+  { id: "USD", label: { en: "US Dollar (USD)", sw: "Dola ya Marekani (USD)" }, flag: "🇺🇸" },
 ];
 
 export default function Onboarding() {
@@ -291,7 +291,7 @@ export default function Onboarding() {
 
   const handleSubmit = async () => {
     if (!user?.id) {
-      toast.error("User session expired. Please sign in again.");
+      toast.error(lang === 'sw' ? "Kipindi chako kimeisha. Tafadhali ingia tena." : "User session expired. Please sign in again.");
       return;
     }
 
@@ -350,7 +350,7 @@ export default function Onboarding() {
             dispatch(loadUserProfile());
         }
       } else {
-        throw new Error(resultAction.error.message || "Failed to create shop");
+        throw new Error(resultAction.error.message || (lang === 'sw' ? "Imeshindwa kusajili duka" : "Failed to create shop"));
       }
     } catch (error: any) {
       toast.error(error.message || (lang === 'sw' ? "Kuna tatizo limetokea" : "An error occurred"));
@@ -470,7 +470,7 @@ export default function Onboarding() {
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   {lang === 'sw'
-                    ? "Hizi ndio pekee zinazohitajika. Maelezo, anwani na nyaraka za kisheria unaweza kuongeza baadaye."
+                    ? "Hizi ndizo pekee zinazohitajika. Maelezo, anwani na nyaraka za kisheria unaweza kuongeza baadaye."
                     : "These are all we need. Description, address and legal documents can be added any time."}
                 </p>
               </motion.div>
@@ -481,7 +481,7 @@ export default function Onboarding() {
               <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-7">
 
                 <div className="space-y-3">
-                  <label className="text-sm font-bold">{lang === 'sw' ? "Unauza nini? (chagua yote yanayohusika) *" : "What do you sell? (pick all that apply) *"}</label>
+                  <label className="text-sm font-bold">{lang === 'sw' ? "Unauza nini? (chagua yote yanayokuhusu) *" : "What do you sell? (pick all that apply) *"}</label>
                   <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                     {PRODUCT_CATEGORIES.map((cat) => {
                       const isSelected = form.productCategories.includes(cat.id);
@@ -496,7 +496,7 @@ export default function Onboarding() {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-sm font-bold">{lang === 'sw' ? "Bidhaa hizi huuza vipi?" : "How do you measure your products?"}</label>
+                  <label className="text-sm font-bold">{lang === 'sw' ? "Unapima vipi bidhaa zako?" : "How do you measure your products?"}</label>
                   <div className="flex flex-wrap gap-2">
                     {SELLING_UNITS.map((u) => {
                       const on = form.productCapabilities[u.key];
@@ -508,13 +508,13 @@ export default function Onboarding() {
                     })}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {lang === 'sw' ? "Hivi ndivyo POS itakavyohesabu bei — unaweza kuongeza vipimo zaidi kwenye bidhaa moja baadaye." : "This is how the till calculates prices — you can still mix units per product later."}
+                    {lang === 'sw' ? "Hivi ndivyo mfumo utakavyohesabu mauzo — unaweza kuweka kipimo tofauti kwa kila bidhaa baadaye." : "This is how the till calculates prices — you can still mix units per product later."}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1 border-t border-dashed border-border">
                   <div className="space-y-3 pt-4">
-                    <label className="text-sm font-bold">{lang === 'sw' ? "Una stoo?" : "Do you keep stock?"}</label>
+                    <label className="text-sm font-bold">{lang === 'sw' ? "Unaweka mzigo (stoo)?" : "Do you keep stock?"}</label>
                     <div className="space-y-2">
                       {STOCK_QUESTIONS.map((q) => (
                         <div key={q.id} onClick={() => setForm({ ...form, inventoryModel: q.id })} className={cn("rounded-xl border-2 p-3 cursor-pointer flex items-center gap-3", form.inventoryModel === q.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
@@ -529,7 +529,7 @@ export default function Onboarding() {
                   <div className="space-y-3 pt-4">
                     <label className="text-sm font-bold">{lang === 'sw' ? "Sarafu" : "Currency"}</label>
                     <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
-                      {CURRENCIES.map(c => <option key={c.id} value={c.id}>{c.flag} {c.label}</option>)}
+                      {CURRENCIES.map(c => <option key={c.id} value={c.id}>{c.flag} {lang === 'sw' ? c.label.sw : c.label.en}</option>)}
                     </select>
                     <p className="text-xs text-muted-foreground">
                       {lang === 'sw' ? "Bei zote za POS na ripiti hutumia sarafu hii." : "Every till price and report uses this currency."}
@@ -546,9 +546,9 @@ export default function Onboarding() {
                 <div onClick={() => setForm({ ...form, marketplace: !form.marketplace })} className={cn("rounded-xl border-2 p-4 cursor-pointer transition-all flex items-start gap-3", form.marketplace ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
                   <ShoppingCart className={cn("w-5 h-5 mt-0.5 shrink-0", form.marketplace ? "text-primary" : "text-muted-foreground")} />
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-bold">{lang === 'sw' ? "Onyesha duka langu kwenye orodha ya Twende Duka" : "List my shop in the Twende Duka directory"}</h3>
+                    <h3 className="text-sm font-bold">{lang === 'sw' ? "Duka langu liwe kwenye orodha ya Twende Duka" : "List my shop in the Twende Duka directory"}</h3>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      {lang === 'sw' ? "Wanunuzi wa karibu hukupata kwenye ramani na kutafuta bidhaa zako." : "Nearby buyers find you on the map and search your products."}
+                      {lang === 'sw' ? "Wanunuzi wa karibu hutakupata kwenye ramani na hutafuta bidhaa zako." : "Nearby buyers find you on the map and search your products."}
                     </p>
                   </div>
                   {form.marketplace && <CheckCircle2 className="w-5 h-5 shrink-0 text-primary" />}
@@ -557,9 +557,9 @@ export default function Onboarding() {
                 <div onClick={() => setForm({ ...form, social: !form.social })} className={cn("rounded-xl border-2 p-4 cursor-pointer transition-all flex items-start gap-3", form.social ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
                   <Smartphone className={cn("w-5 h-5 mt-0.5 shrink-0", form.social ? "text-primary" : "text-muted-foreground")} />
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-bold">{lang === 'sw' ? "Nipeuat bidhaa kwenye mitandao ya kijamii" : "Post my products to social media"}</h3>
+                    <h3 className="text-sm font-bold">{lang === 'sw' ? "Nitangaze bidhaa zangu kwenye mitandao ya kijamii" : "Post my products to social media"}</h3>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      {lang === 'sw' ? "Facebook, Instagram na TikTok — huunganishwa baada ya duka kuundwa." : "Facebook, Instagram and TikTok — connected from Marketing once your shop exists."}
+                      {lang === 'sw' ? "Facebook, Instagram na TikTok — huunganishwa baada ya duka lako kuundwa." : "Facebook, Instagram and TikTok — connected from Marketing once your shop exists."}
                     </p>
                   </div>
                   {form.social && <CheckCircle2 className="w-5 h-5 shrink-0 text-primary" />}
@@ -567,9 +567,9 @@ export default function Onboarding() {
 
                 {!form.marketplace && !form.social && (
                   <div className="rounded-xl border border-dashed border-border bg-muted/40 p-4">
-                    <p className="text-sm font-medium">{lang === 'sw' ? "Sawa — tutaanza na kasha pekee." : "No problem — we'll start with the till only."}</p>
+                    <p className="text-sm font-medium">{lang === 'sw' ? "Sawa — tutaanza na mfumo wa kuuzia (POS) pekee." : "No problem — we'll start with the till only."}</p>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      {lang === 'sw' ? "Ukiwa uko tayari, washa usajili wa umma kutoka Dashibodi › Mipangilio ya Duka." : "When you're ready, turn on public listing from Dashboard › Shop Setup."}
+                      {lang === 'sw' ? "Ukiwa tayari, unaweza kuwasha usajili wa umma baadaye: Dashibodi › Mipangilio ya Duka." : "When you're ready, turn on public listing from Dashboard › Shop Setup."}
                     </p>
                   </div>
                 )}
@@ -608,7 +608,7 @@ export default function Onboarding() {
                       </div>
                       <Button type="button" variant="outline" onClick={detectLocation} disabled={locating} className="w-full">
                         {locating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LocateFixed className="w-4 h-4 mr-2" />}
-                        {form.lat ? (lang === 'sw' ? "Sasisha Kutoka GPS" : "Update from GPS") : (lang === 'sw' ? "Tafuta Mahaliangu" : "Find my location")}
+                        {form.lat ? (lang === 'sw' ? "Sasisha kutoka GPS" : "Update from GPS") : (lang === 'sw' ? "Tafuta mahali pangu" : "Find my location")}
                       </Button>
                     </div>
 
@@ -657,11 +657,11 @@ export default function Onboarding() {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">TIN Number</label>
+                              <label className="text-sm font-medium">{lang === 'sw' ? "Namba ya TIN" : "TIN Number"}</label>
                               <Input placeholder="000-000-000" value={form.legal.tin} onChange={(e) => setForm({ ...form, legal: { ...form.legal, tin: e.target.value } })} />
                             </div>
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">VRN Number</label>
+                              <label className="text-sm font-medium">{lang === 'sw' ? "Namba ya VRN" : "VRN Number"}</label>
                               <Input placeholder="..." value={form.legal.vrn} onChange={(e) => setForm({ ...form, legal: { ...form.legal, vrn: e.target.value } })} />
                             </div>
                             <div className="space-y-2">
@@ -674,7 +674,7 @@ export default function Onboarding() {
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground mt-2 italic">
-                            {lang === 'sw' ? "Huna hizi taarifa sasa? Usijali, unaweza kuziweka baadaye kwenye Settings." : "You don't have these right now? No problem, you can always add them later in your Shop Settings."}
+                            {lang === 'sw' ? "Huna hizi taarifa kwa sasa? Usijali, unaweza kuziweka baadaye katika Mipangilio ya Duka." : "You don't have these right now? No problem, you can always add them later in your Shop Settings."}
                           </p>
                         </AccordionContent>
                       </AccordionItem>
@@ -691,7 +691,7 @@ export default function Onboarding() {
                 <div className="bg-muted/50 rounded-xl p-4 space-y-3 text-sm">
                   <div className="flex justify-between items-start border-b pb-3">
                     <div>
-                      <h4 className="font-bold text-muted-foreground mb-1">{lang === 'sw' ? "Duka" : "Shop"}</h4>
+                      <h4 className="font-bold text-muted-foreground mb-1">{lang === 'sw' ? "Duka lako" : "Shop"}</h4>
                       <p className="font-medium text-lg leading-tight">{form.name || "—"}</p>
                       <p className="text-muted-foreground">{form.phone}{form.whatsapp ? ` · WhatsApp ${form.whatsapp}` : ""}</p>
                     </div>
@@ -700,7 +700,7 @@ export default function Onboarding() {
 
                   <div className="flex justify-between items-start border-b pb-3">
                     <div>
-                      <h4 className="font-bold text-muted-foreground mb-1">{lang === 'sw' ? "Kasha na Bidhaa" : "Till & Products"}</h4>
+                      <h4 className="font-bold text-muted-foreground mb-1">{lang === 'sw' ? "Mfumo wa kuuzia na bidhaa" : "Till & Products"}</h4>
                       <p className="text-muted-foreground">{form.productCategories.map(t => PRODUCT_CATEGORIES.find(x => x.id === t)?.label[lang === 'sw' ? 'sw' : 'en']).join(", ") || "—"}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {SELLING_UNITS.filter(u => form.productCapabilities[u.key]).map(u => lang === 'sw' ? u.sw : u.en).join(" · ") || "—"}
@@ -712,14 +712,14 @@ export default function Onboarding() {
 
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-bold text-muted-foreground mb-1">{lang === 'sw' ? "Mawasiliano" : "Reach"}</h4>
+                      <h4 className="font-bold text-muted-foreground mb-1">{lang === 'sw' ? "Ufikiaji wa wanunuzi" : "Reach"}</h4>
                       <p className="text-muted-foreground">
                         {form.marketplace
-                          ? `${lang === 'sw' ? "Orodha ya umma" : "Public directory"}: ${form.district}, ${form.region}${form.lat ? ` · ${lang === 'sw' ? "ameweka alama" : "pinned"}` : ""}`
+                          ? `${lang === 'sw' ? "Orodha ya umma" : "Public directory"}: ${form.district}, ${form.region}${form.lat ? ` · ${lang === 'sw' ? "ina alama kwenye ramani" : "pinned"}` : ""}`
                           : (lang === 'sw' ? "Duka binafsi — halionekani kwenye orodha" : "Private shop — not listed in the directory")}
                       </p>
                       <p className="mt-1 text-muted-foreground">
-                        {form.social ? (lang === 'sw' ? "Mitandao ya kijamii: unganisha kwenye Marketing" : "Social media: connect in Marketing") : (lang === 'sw' ? "Hakuna mitandao ya kijamii" : "No social posting")}
+                        {form.social ? (lang === 'sw' ? "Mitandao ya kijamii: unganisha katika Marketing" : "Social media: connect in Marketing") : (lang === 'sw' ? "Hakuna mitandao ya kijamii" : "No social posting")}
                       </p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setStep(3)}>{lang === 'sw' ? "Badilisha" : "Edit"}</Button>
@@ -728,7 +728,7 @@ export default function Onboarding() {
 
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   {lang === 'sw'
-                    ? "Duka lako litaundwa mara moja ubofya kitufe haki. Usajili wa umma hukaguliwa na timu ya Twende Duka kabla ya kuanza kuonekana."
+                    ? "Duka lako litaundwa mara tu unapobofya kitufe hiki. Usajili wa kwenye orodha ya umma hukaguliwa na timu ya Twende Duka kabla ya kuanza kuonekana."
                     : "Your shop is created as soon as you hit the button. Public listing is reviewed by the Twende Duka team before it goes live."}
                 </p>
               </motion.div>
