@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useMasterCatalog, useTapToAdd } from "@/hooks/useMasterCatalog";
+import { useAppSelector } from "@/store/hooks";
 import type { MasterCatalogProduct } from "@/types";
 import { useI18n, type TranslationKey } from "@/lib/i18n";
 import CatalogStagingSheet from "./CatalogStagingSheet";
@@ -76,9 +77,10 @@ export default function TapToAddCatalogDialog({ shopId, branchId, open, onOpenCh
   const [staged, setStaged] = useState<Record<string, StagedSelection>>({});
   const [stagingOpen, setStagingOpen] = useState(false);
 
+  const shop = useAppSelector((s) => s.shops.shops.find((s2) => s2.id === shopId));
   const filter = useMemo(
-    () => ({ shopId, q: debouncedSearch, category, brand }),
-    [shopId, debouncedSearch, category, brand]
+    () => ({ shopId, q: debouncedSearch, category, brand, productCategories: shop?.productCategories }),
+    [shopId, debouncedSearch, category, brand, shop?.productCategories]
   );
   const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useMasterCatalog(filter);
   const tapToAdd = useTapToAdd(shopId);

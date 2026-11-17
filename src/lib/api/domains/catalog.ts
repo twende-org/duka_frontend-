@@ -125,7 +125,11 @@ export interface MasterCatalogSearchParams {
   q?: string;
   category?: string;
   brand?: string;
+  /** One lane, exactly as the backend's single-value filter has always worked. */
   niche?: string;
+  /** The merchant's catalog lanes; the backend falls back to all when a lane
+   *  has no seeded rows yet. */
+  niches?: string[];
   page?: number;
   pageSize?: number;
   signal?: AbortSignal;
@@ -153,6 +157,7 @@ export async function searchMasterCatalog(
       category: params.category || undefined,
       brand: params.brand || undefined,
       niche: params.niche || undefined,
+      niches: params.niches?.length ? params.niches.join(",") : undefined,
       page,
       page_size: params.pageSize ?? CATALOG_PAGE_SIZE,
     },

@@ -14,6 +14,26 @@ export interface CatalogFilter {
   q: string;
   category: string;
   brand: string;
+  /** The shop's own product-category picks, resolved to catalog lanes. */
+  productCategories?: string[] | null;
+}
+
+/**
+ * Shop product-category ids (the setup wizard's controlled vocabulary) →
+ * catalog lanes (MasterProduct.niche). Lanes join the day their data is
+ * seeded; until then the backend's empty-lane fallback keeps showing all.
+ */
+const LANES_BY_CATEGORY_ID: Record<string, string[]> = {
+  electronics: ["electronics"],
+  phones: ["electronics"],
+};
+
+export function catalogLanesForShop(productCategories?: string[] | null): string[] {
+  const lanes = new Set<string>();
+  for (const id of productCategories || []) {
+    for (const lane of LANES_BY_CATEGORY_ID[id] || []) lanes.add(lane);
+  }
+  return [...lanes];
 }
 
 /**
@@ -25,6 +45,7 @@ export function useMasterCatalog(
   filter: CatalogFilter,
   options: { pageSize?: number } = {}
 ) {
+  const niches = catalogLanesForShop(filter.productCategories);
   return useInfiniteQuery({
     queryKey: [
       ...catalogKeys.lists(),
@@ -32,6 +53,7 @@ export function useMasterCatalog(
       filter.q.trim().toLowerCase(),
       filter.category,
       filter.brand,
+      niches,
     ],
     queryFn: ({ pageParam, signal }) =>
       searchMasterCatalog({
@@ -39,6 +61,7 @@ export function useMasterCatalog(
         q: filter.q,
         category: filter.category || undefined,
         brand: filter.brand || undefined,
+        niches: niches.length ? niches : undefined,
         page: pageParam as number,
         pageSize: options.pageSize,
         signal,
