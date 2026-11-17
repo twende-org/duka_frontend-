@@ -139,7 +139,7 @@ export default function TapToAddCatalogDialog({ shopId, branchId, open, onOpenCh
     <>
       <Dialog open={open} onOpenChange={(v) => { if (!v) closeAll(); }}>
         <DialogContent className="h-[100dvh] max-h-[100dvh] w-[100vw] max-w-[100vw] overflow-hidden rounded-none bg-background/95 p-4 backdrop-blur-sm grid-rows-[auto_minmax(0,1fr)] sm:h-[95vh] sm:max-h-[95vh] sm:w-[96vw] sm:max-w-[96vw] sm:rounded-3xl sm:p-6">
-          <DialogHeader className="flex flex-col gap-3 border-b pb-4">
+          <DialogHeader className="flex min-w-0 flex-col gap-3 border-b pb-4">
             <div className="flex flex-row items-start justify-between pr-8">
               <div>
                 <DialogTitle className="text-xl sm:text-2xl">{t("catalog.title")}</DialogTitle>
