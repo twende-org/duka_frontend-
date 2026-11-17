@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, Image as ImageIcon, PackagePlus, Plus, Search, X } from "lucide-react";
+import { Check, Image as ImageIcon, PackagePlus, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -138,21 +138,13 @@ export default function TapToAddCatalogDialog({ shopId, branchId, open, onOpenCh
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => { if (!v) closeAll(); }}>
-        <DialogContent className="h-[100dvh] max-h-[100dvh] w-[100vw] max-w-[100vw] overflow-hidden rounded-none bg-background p-0 grid-rows-[auto_minmax(0,1fr)] sm:h-[95vh] sm:max-h-[95vh] sm:w-[720px] sm:max-w-[95vw] sm:rounded-3xl [&>button]:hidden">
-          <DialogHeader className="flex flex-col gap-3 border-b border-border/40 p-4 sm:p-5">
-            <div className="flex items-center justify-between pr-2">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <PackagePlus className="h-5 w-5" />
-                </div>
-                <div>
-                  <DialogTitle className="text-base sm:text-lg">{t("catalog.title")}</DialogTitle>
-                  <p className="hidden sm:block text-xs text-muted-foreground">{t("catalog.subtitle")}</p>
-                </div>
+        <DialogContent className="h-[100dvh] max-h-[100dvh] w-[100vw] max-w-[100vw] overflow-hidden rounded-none bg-background/95 p-4 backdrop-blur-sm grid-rows-[auto_minmax(0,1fr)] sm:h-[95vh] sm:max-h-[95vh] sm:w-[96vw] sm:max-w-[96vw] sm:rounded-3xl sm:p-6">
+          <DialogHeader className="flex flex-col gap-3 border-b pb-4">
+            <div className="flex flex-row items-start justify-between pr-8">
+              <div>
+                <DialogTitle className="text-xl sm:text-2xl">{t("catalog.title")}</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-1">{t("catalog.subtitle")}</p>
               </div>
-              <Button variant="ghost" size="icon" className="rounded-full" onClick={closeAll} aria-label={t("common.close")}>
-                <X className="h-5 w-5" />
-              </Button>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -161,7 +153,7 @@ export default function TapToAddCatalogDialog({ shopId, branchId, open, onOpenCh
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t("catalog.searchPlaceholder")}
-                className="h-11 rounded-xl bg-muted/50 pl-9 text-sm"
+                className="h-11 rounded-xl bg-background pl-9 text-sm"
               />
             </div>
             <div className="space-y-2">
@@ -186,10 +178,10 @@ export default function TapToAddCatalogDialog({ shopId, branchId, open, onOpenCh
             </div>
           </DialogHeader>
 
-          <div className="min-h-0 overflow-y-auto p-4 pb-28 sm:p-5 sm:pb-28">
+          <div className="min-h-0 overflow-y-auto pb-28">
             {isLoading && catalogRows.length === 0 ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, i) => (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {Array.from({ length: 10 }).map((_, i) => (
                   <div key={i} className="h-40 animate-pulse rounded-2xl bg-muted/40" />
                 ))}
               </div>
@@ -199,7 +191,7 @@ export default function TapToAddCatalogDialog({ shopId, branchId, open, onOpenCh
                 <p className="font-semibold text-muted-foreground">{t("catalog.noResults")}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {catalogRows.map((row) => (
                   <CatalogCard
                     key={row.id}
@@ -227,18 +219,20 @@ export default function TapToAddCatalogDialog({ shopId, branchId, open, onOpenCh
           </div>
 
           {stagedCount > 0 && (
-            <div className="absolute inset-x-0 bottom-0 z-10 border-t border-border/40 bg-background/95 p-3 backdrop-blur-md sm:p-4">
-              <Button
-                className="h-12 w-full rounded-xl text-sm font-black tracking-wide"
-                onClick={() => setStagingOpen(true)}
-              >
-                <span className="flex w-full items-center justify-between px-2">
-                  <span>{t("catalog.review")}</span>
-                  <span className="rounded-lg bg-white/20 px-2.5 py-0.5 font-black">
-                    {t("catalog.selectedCount").replace("{n}", String(stagedCount))}
+            <div className="absolute inset-x-4 bottom-4 z-10 sm:inset-x-6 sm:bottom-6">
+              <div className="rounded-2xl border border-border/60 bg-background/95 p-2 shadow-xl backdrop-blur-md">
+                <Button
+                  className="h-12 w-full rounded-xl text-sm font-black tracking-wide"
+                  onClick={() => setStagingOpen(true)}
+                >
+                  <span className="flex w-full items-center justify-between px-2">
+                    <span>{t("catalog.review")}</span>
+                    <span className="rounded-lg bg-white/20 px-2.5 py-0.5 font-black">
+                      {t("catalog.selectedCount").replace("{n}", String(stagedCount))}
+                    </span>
                   </span>
-                </span>
-              </Button>
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -340,15 +334,15 @@ function CatalogCard({ row, selected, onToggle }: { row: MasterCatalogProduct; s
           {selected ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-2.5">
+      <div className="flex flex-1 flex-col gap-1.5 p-3">
         <div className="min-w-0 flex-1">
-          <h3 className="line-clamp-2 text-xs font-bold leading-snug">{row.name}</h3>
-          <p className="mt-0.5 truncate text-[10px] font-semibold text-muted-foreground">
+          <h3 className="line-clamp-2 text-sm font-bold leading-snug">{row.name}</h3>
+          <p className="mt-0.5 truncate text-xs font-semibold text-muted-foreground">
             {[row.brand, row.categoryName].filter(Boolean).join(" · ")}
           </p>
         </div>
         {row.defaultWarranty && (
-          <span className="w-fit truncate rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">
+          <span className="w-fit truncate rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
             {row.defaultWarranty}
           </span>
         )}

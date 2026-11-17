@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TriangleAlert, Trash2, X } from "lucide-react";
+import { TriangleAlert, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -55,18 +55,15 @@ export default function CatalogStagingSheet({ open, lines, submitting, onClose, 
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="h-[100dvh] max-h-[100dvh] w-[100vw] max-w-[100vw] overflow-hidden rounded-none bg-background p-0 grid-rows-[auto_minmax(0,1fr)_auto] sm:h-[92vh] sm:max-h-[92vh] sm:w-[560px] sm:max-w-[95vw] sm:rounded-3xl [&>button]:hidden">
-        <DialogHeader className="flex flex-row items-center justify-between border-b border-border/40 p-4 pr-2 sm:p-5">
+      <DialogContent className="h-[100dvh] max-h-[100dvh] w-[100vw] max-w-[100vw] overflow-hidden rounded-none bg-background/95 p-4 backdrop-blur-sm grid-rows-[auto_minmax(0,1fr)_auto] sm:h-[95vh] sm:max-h-[95vh] sm:w-[720px] sm:max-w-[95vw] sm:rounded-3xl sm:p-6">
+        <DialogHeader className="flex flex-row items-start justify-between pr-8 border-b pb-4">
           <div>
-            <DialogTitle className="text-base sm:text-lg">{t("catalog.reviewTitle")}</DialogTitle>
-            <p className="mt-0.5 text-xs text-muted-foreground">{t("catalog.reviewHint")}</p>
+            <DialogTitle className="text-xl sm:text-2xl">{t("catalog.reviewTitle")}</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">{t("catalog.reviewHint")}</p>
           </div>
-          <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose} aria-label={t("common.close")}>
-            <X className="h-5 w-5" />
-          </Button>
         </DialogHeader>
 
-        <div className="min-h-0 space-y-4 overflow-y-auto p-4 sm:p-5">
+        <div className="min-h-0 space-y-4 overflow-y-auto">
           {error && (
             <div className="flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm font-semibold text-destructive">
               <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
@@ -86,11 +83,11 @@ export default function CatalogStagingSheet({ open, lines, submitting, onClose, 
           )}
 
           {lines.map((line) => (
-            <div key={line.master.id} className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-sm">
+            <div key={line.master.id} className="rounded-2xl border border-border/60 bg-card/50 p-4 shadow-sm">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <h4 className="truncate text-sm font-bold">{line.master.name}</h4>
-                  <p className="truncate text-[10px] font-semibold text-muted-foreground">
+                  <p className="truncate text-xs font-semibold text-muted-foreground">
                     {[line.master.brand, line.master.categoryName].filter(Boolean).join(" · ")}
                   </p>
                 </div>
@@ -106,7 +103,7 @@ export default function CatalogStagingSheet({ open, lines, submitting, onClose, 
 
               <div className="mt-3 grid grid-cols-3 gap-2">
                 <label className="space-y-1">
-                  <span className="block text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                  <span className="block text-xs font-bold text-muted-foreground">
                     {t("products.buyingPriceShort")}
                   </span>
                   <Input
@@ -115,11 +112,11 @@ export default function CatalogStagingSheet({ open, lines, submitting, onClose, 
                     value={line.buyingPrice}
                     onChange={(e) => onUpdate(line.master.id, { buyingPrice: e.target.value })}
                     placeholder="0"
-                    className="h-10 rounded-xl text-sm"
+                    className="h-11 rounded-xl bg-background text-sm"
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="block text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                  <span className="block text-xs font-bold text-muted-foreground">
                     {t("products.sellingPriceShort")}
                   </span>
                   <Input
@@ -128,11 +125,11 @@ export default function CatalogStagingSheet({ open, lines, submitting, onClose, 
                     value={line.sellingPrice}
                     onChange={(e) => onUpdate(line.master.id, { sellingPrice: e.target.value })}
                     placeholder="0"
-                    className="h-10 rounded-xl text-sm"
+                    className="h-11 rounded-xl bg-background text-sm"
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="block text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                  <span className="block text-xs font-bold text-muted-foreground">
                     {t("sales.quantity")}
                   </span>
                   <Input
@@ -141,13 +138,13 @@ export default function CatalogStagingSheet({ open, lines, submitting, onClose, 
                     value={line.quantity}
                     onChange={(e) => onUpdate(line.master.id, { quantity: e.target.value })}
                     placeholder={line.master.requiresImei && line.imeis.length > 0 ? String(line.imeis.length) : "0"}
-                    className="h-10 rounded-xl text-sm"
+                    className="h-11 rounded-xl bg-background text-sm"
                   />
                 </label>
               </div>
 
               {!line.master.requiresImei && line.master.alreadyAdded && (
-                <p className="mt-2 text-[10px] font-medium text-muted-foreground">{t("catalog.priceNote")}</p>
+                <p className="mt-2 text-xs font-medium text-muted-foreground">{t("catalog.priceNote")}</p>
               )}
 
               {line.master.requiresImei && (
@@ -163,7 +160,7 @@ export default function CatalogStagingSheet({ open, lines, submitting, onClose, 
           ))}
         </div>
 
-        <div className="border-t border-border/40 bg-background p-3 sm:p-4">
+        <div className="border-t border-border/40 pt-4">
           <Button
             className="h-12 w-full rounded-xl text-sm font-black tracking-wide"
             disabled={invalid || submitting}
