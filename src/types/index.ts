@@ -151,6 +151,7 @@ export interface ShopSettings {
     returnsPolicy?: string;
     shippingPolicy?: string;
     termsOfService?: string;
+    allowSaleWithoutImei?: boolean;
   };
   aiMarketing?: {
     enabled: boolean;
@@ -208,6 +209,8 @@ export interface Product {
   updatedAt?: string | number | { toDate: () => Date };
   sourceProductId?: string; // For B2B imports
   supplierShopId?: string; // The platform shop ID of the supplier
+  /** Unit-tracked stock (handsets, laptops): every sale needs the exact devices. */
+  requiresImei?: boolean;
   /** Storefront reads only: aggregated branch stock, served by the public API. */
   stock?: number;
   minStock?: number;
@@ -229,7 +232,8 @@ export interface Sale {
   customerPhone?: string;
   customerId?: string; // Links this sale to a specific customer
   notes?: string;
-  status?: "completed" | "draft";
+  /** `voided` is written only by the sale-void endpoint; stock and units return. */
+  status?: "completed" | "draft" | "voided";
   createdBy?: string;
   createdByName?: string;
   items?: OrderItem[]; // Support for multi-item sales
@@ -464,6 +468,12 @@ export interface OrderItem {
   pickedQty?: number;
   price: number;
   subtotal: number;
+  /**
+   * The exact devices this line sold, snapshotted by the backend when the sale
+   * is rung. Empty for untracked stock, and it survives a void so a receipt
+   * never rewrites the units it already printed.
+   */
+  imeiNumbers?: string[];
 }
 
 export interface FulfillmentDetails {
@@ -761,6 +771,49 @@ export interface CustomerPayment {
 }
 
 // Catalog Redesign Types
+
+/**
+ * One row of the platform-wide master catalog every shop shares (tap-to-add).
+ * Identity only — never price or stock, because each shop keeps its own margin
+ * and its own units on its own `Product`.
+ */
+export interface MasterCatalogProduct {
+  id: string;
+  name: string;
+  brand: string;
+  /** Free text, not a shop `Category` id: the backend resolves it per shop. */
+  categoryName: string;
+  niche: string;
+  barcode?: string;
+  imageUrl?: string;
+  defaultWarranty?: string;
+  requiresImei: boolean;
+  attributes?: Record<string, string>;
+  isVerified: boolean;
+  isActive: boolean;
+  /** True when this shop already carries the row; only set when a shopId was sent. */
+  alreadyAdded: boolean;
+  createdAt?: string | number | { toDate: () => Date };
+  updatedAt?: string | number | { toDate: () => Date };
+}
+
+export type ProductSerialStatus = "in_stock" | "sold" | "reserved" | "returned" | "damaged";
+
+/** One physical unit inside one shop, tracked by IMEI and/or serial number. */
+export interface ProductSerial {
+  id: string;
+  shopId: string;
+  productId: string;
+  branchId?: string;
+  imeiNumber: string;
+  serialNumber: string;
+  status: ProductSerialStatus;
+  /** Set once a checkout links the unit to a sale line. */
+  saleItemId?: string;
+  notes?: string;
+  createdAt?: string | number | { toDate: () => Date };
+  updatedAt?: string | number | { toDate: () => Date };
+}
 
 export interface MarketplaceCategory {
   id: string;

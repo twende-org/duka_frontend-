@@ -105,6 +105,27 @@ export function useDeleteDraftSale(shopId: string | undefined) {
   });
 }
 
+/**
+ * Takes a completed sale back: stock and IMEI units return to the shelf and the
+ * day summary is recomputed server-side. The backend only accepts owner/manager.
+ */
+export function useVoidSale(shopId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ saleId, reason }: { saleId: string; reason?: string }) => {
+      if (!shopId) throw new Error("No shop ID");
+      await salesApi.voidSale(shopId, saleId, reason);
+      return saleId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sales", shopId] });
+      queryClient.invalidateQueries({ queryKey: ["sales", "summary", shopId] });
+      queryClient.invalidateQueries({ queryKey: ["inventory", shopId] });
+      queryClient.invalidateQueries({ queryKey: ["products", shopId] });
+    },
+  });
+}
+
 export function useSummariesRange(shopId: string | undefined, startDate: string, endDate: string) {
   return useQuery({
     queryKey: ["sales", "summaries", "range", shopId, startDate, endDate],

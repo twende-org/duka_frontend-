@@ -120,6 +120,7 @@ export function fromApiProduct(raw: unknown): Product {
     updatedAt: row.updatedAt as Product["updatedAt"],
     sourceProductId: optionalString(row.sourceProductId),
     supplierShopId: optionalString(row.supplierShopId),
+    requiresImei: row.requiresImei === true,
   };
 }
 

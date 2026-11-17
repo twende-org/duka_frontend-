@@ -7,7 +7,7 @@ import {
   Shirt, Smartphone, Monitor, ShoppingBag, Utensils,
   Wrench, Hammer, Sofa, Heart, Car, Wheat, Dumbbell,
   Baby, BookOpen, Diamond, ShieldPlus, Component,
-  ChevronRight, ChevronLeft, PartyPopper, Tag, LocateFixed
+  ChevronRight, ChevronLeft, PartyPopper, Tag, LocateFixed, PackagePlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +21,10 @@ import SEO from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import WizardShell from "@/components/onboarding/WizardShell";
+import { TZ_PHONE_PREFIX, isDialablePhone, phoneForStorage } from "@/lib/phone";
 import { updateMeOnApi } from "@/lib/api/domains/auth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import TapToAddCatalogDialog from "@/components/catalog/TapToAddCatalogDialog";
 
 
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
@@ -140,7 +142,7 @@ export default function Onboarding() {
     // Step 1: Identity
     name: "",
     phone: "+255",
-    whatsapp: "",
+    whatsapp: TZ_PHONE_PREFIX,
     useAccountPhone: true,
 
     // Step 2: Products & prices (everything the till needs)
@@ -180,8 +182,10 @@ export default function Onboarding() {
   const [submitting, setSubmitting] = useState(false);
   const [locating, setLocating] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
 
   const existingShops = useAppSelector((s) => s.shops.shops);
+  const currentShopId = useAppSelector((s) => s.shops.currentShopId);
   const [checkingShops, setCheckingShops] = useState(true);
   const [createAnyway, setCreateAnyway] = useState(false);
 
@@ -248,8 +252,8 @@ export default function Onboarding() {
   };
 
   const handleNext = () => {
-    if (step === 1 && (!form.name || !form.phone)) {
-      toast.error(lang === 'sw' ? "Tafadhali jaza jina la duka na namba ya simu" : "Please enter shop name and phone");
+    if (step === 1 && (!form.name || !isDialablePhone(form.phone))) {
+      toast.error(lang === 'sw' ? "Tafadhali jaza jina la duka na namba kamili ya simu (mfano +255 712 345 678)" : "Please enter the shop name and a full phone number (e.g. +255 712 345 678)");
       return;
     }
     if (step === 2 && form.productCategories.length === 0) {
@@ -305,7 +309,7 @@ export default function Onboarding() {
       const shopData = {
         name: form.name,
         phone: form.phone,
-        whatsappNumber: form.whatsapp,
+        whatsappNumber: phoneForStorage(form.whatsapp),
         ownerId: user.id,
 
         productCategories: form.productCategories,
@@ -420,7 +424,11 @@ export default function Onboarding() {
               : "Your shop is now registered. Now, let's set up your product catalog."}
           </p>
           <div className="flex flex-col gap-3">
-            <Button size="lg" onClick={() => navigate("/dashboard/products/new")} className="w-full">
+            <Button size="lg" onClick={() => setCatalogOpen(true)} className="w-full">
+              <PackagePlus className="mr-2 h-5 w-5" />
+              {lang === 'sw' ? "Ongeza Kutoka Katalogi" : "Add from Catalog"}
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => navigate("/dashboard/products")} className="w-full">
               {lang === 'sw' ? "Ongeza Bidhaa" : "Add Product"}
             </Button>
             <Button size="lg" variant="ghost" onClick={() => navigate("/dashboard")} className="w-full">
@@ -428,6 +436,7 @@ export default function Onboarding() {
             </Button>
           </div>
         </motion.div>
+        <TapToAddCatalogDialog shopId={currentShopId} open={catalogOpen} onOpenChange={setCatalogOpen} />
       </div>
     );
   }
@@ -693,7 +702,8 @@ export default function Onboarding() {
                     <div>
                       <h4 className="font-bold text-muted-foreground mb-1">{lang === 'sw' ? "Duka lako" : "Shop"}</h4>
                       <p className="font-medium text-lg leading-tight">{form.name || "—"}</p>
-                      <p className="text-muted-foreground">{form.phone}{form.whatsapp ? ` · WhatsApp ${form.whatsapp}` : ""}</p>
+                      <p className="text-muted-foreground">{form.phone}
+{phoneForStorage(form.whatsapp) ? ` · WhatsApp ${phoneForStorage(form.whatsapp)}` : ""}</p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setStep(1)}>{lang === 'sw' ? "Badilisha" : "Edit"}</Button>
                   </div>

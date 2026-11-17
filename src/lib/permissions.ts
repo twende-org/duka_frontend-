@@ -13,6 +13,7 @@ export interface RolePermissions {
   // Sales
   canAddSale: boolean;
   canDeleteSale: boolean;
+  canVoidSale: boolean;
   canConfirmDraft: boolean;
   canEditDraft: boolean;
   canDeleteDraft: boolean;
@@ -47,6 +48,7 @@ export const rolePermissions: Record<AppRole, RolePermissions> = {
     canAdjustInventory: true,
     canAddSale: true,
     canDeleteSale: true,
+    canVoidSale: true,
     canConfirmDraft: true,
     canEditDraft: true,
     canDeleteDraft: true,
@@ -73,6 +75,7 @@ export const rolePermissions: Record<AppRole, RolePermissions> = {
     canAdjustInventory: true,
     canAddSale: true,
     canDeleteSale: false,
+    canVoidSale: true,
     canConfirmDraft: true,
     canEditDraft: true,
     canDeleteDraft: true,
@@ -99,6 +102,7 @@ export const rolePermissions: Record<AppRole, RolePermissions> = {
     canAdjustInventory: false,
     canAddSale: true,
     canDeleteSale: false,
+    canVoidSale: false,
     canConfirmDraft: false,
     canEditDraft: true,
     canDeleteDraft: false,

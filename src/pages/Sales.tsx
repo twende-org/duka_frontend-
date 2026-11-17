@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, ShoppingCart, Search, Wallet, Smartphone, Banknote, CreditCard, Printer } from "lucide-react";
+import { Plus, ShoppingCart, Search, Wallet, Smartphone, Banknote, CreditCard, Printer, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,7 @@ import SaleCart, { type CartItem } from "@/components/sales/SaleCart";
 import Fuse from "fuse.js";
 import DraftSalesList from "@/components/sales/DraftSalesList";
 import SaleReceipt from "@/components/sales/SaleReceipt";
+import VoidSaleDialog from "@/components/sales/VoidSaleDialog";
 import { useI18n } from "@/lib/i18n";
 import type { Sale } from "@/types";
 import { PageLoader } from "@/components/common/Loader";
@@ -49,10 +50,12 @@ export default function Sales() {
   const confirmDraftMut = useConfirmDraftSale(currentShopId);
   const deleteDraftMut = useDeleteDraftSale(currentShopId);
 
-  const completedSales = useMemo(() => sales.filter(s => s.status !== "draft"), [sales]);
+  const completedSales = useMemo(() => sales.filter(s => s.status === "completed"), [sales]);
+  const voidedSales = useMemo(() => sales.filter(s => s.status === "voided"), [sales]);
   const draftSales = useMemo(() => sales.filter(s => s.status === "draft"), [sales]);
-  
+
   const [lastCompletedSale, setLastCompletedSale] = useState<Sale | null>(null);
+  const [voidTarget, setVoidTarget] = useState<Sale | null>(null);
   
   const { data: products = [] } = useProducts(currentShopId);
   const { data: inventory = [] } = useInventory(currentShopId, currentBranchId);
@@ -136,7 +139,8 @@ export default function Sales() {
           productName: item.product.name,
           quantity: item.quantity,
           price: item.product.sellingPrice,
-          subtotal: item.lineTotal
+          subtotal: item.lineTotal,
+          ...(item.imeiNumbers?.length ? { imeiNumbers: item.imeiNumbers } : {})
         }))
       };
 
@@ -263,12 +267,162 @@ export default function Sales() {
     return result.filter(s => filterPayment === "all" || s.paymentMethod === filterPayment);
   }, [completedSales, search, filterPayment]);
 
+  const filteredVoided = useMemo(() => {
+    let result = voidedSales;
+
+    if (search.trim()) {
+      const fuse = new Fuse(result, {
+        keys: [
+          { name: 'productName', weight: 1.0 },
+          { name: 'customerName', weight: 0.8 },
+          { name: 'customerPhone', weight: 0.5 },
+          { name: 'notes', weight: 0.3 }
+        ],
+        threshold: 0.3,
+        ignoreLocation: true,
+        useExtendedSearch: true
+      });
+      result = fuse.search(search).map(res => res.item);
+    }
+
+    return result.filter(s => filterPayment === "all" || s.paymentMethod === filterPayment);
+  }, [voidedSales, search, filterPayment]);
+
   const totalRevenue = filtered.reduce((sum, s) => sum + s.totalPrice, 0);
   
   // Real-time Shift Calculations based on today's completed sales
   const shiftCashSales = completedSales.filter(s => s.paymentMethod === "Taslimu").reduce((sum, s) => sum + s.totalPrice, 0);
   const shiftDigitalSales = completedSales.filter(s => ["M-Pesa", "Tigo Pesa", "Airtel Money", "Benki"].includes(s.paymentMethod)).reduce((sum, s) => sum + s.totalPrice, 0);
   const shiftDebtSales = completedSales.filter(s => s.paymentMethod === "Mkopo").reduce((sum, s) => sum + s.totalPrice, 0);
+
+  const renderSaleRows = (rows: Sale[], isVoided: boolean) => (
+    <>
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-xl border bg-card overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left [&_th]:whitespace-nowrap [&_td]:whitespace-nowrap">
+            <thead className="sticky top-0 z-10 text-xs text-muted-foreground bg-muted/50 backdrop-blur uppercase">
+              <tr>
+                <th className="px-4 py-3 font-medium w-[60px]">#</th>
+                <th className="px-4 py-3 font-medium">{t("sales.product")}</th>
+                <th className="px-4 py-3 font-medium">{t("sales.customer")}</th>
+                <th className="px-4 py-3 font-medium text-right">{t("sales.quantity")}</th>
+                <th className="px-4 py-3 font-medium text-right">{t("sales.total")}</th>
+                <th className="px-4 py-3 font-medium text-center w-[120px]">{t("sales.payment")}</th>
+                <th className="px-4 py-3 font-medium">{t("sales.date")}</th>
+                <th className="px-4 py-3 font-medium text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                      <ShoppingCart className="mx-auto h-8 w-8 mb-3 opacity-20" />
+                      {t("sales.noSales")}
+                    </motion.div>
+                  </td>
+                </tr>
+              ) : (
+                <AnimatePresence initial={false} mode="popLayout">
+                  {rows.map((s, i) => (
+                    <motion.tr
+                      key={s.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.28, delay: Math.min(i, 12) * 0.03, ease: [0.22, 1, 0.36, 1] }}
+                      className="group relative transition-colors duration-200 hover:bg-primary/5"
+                    >
+                      <td className="relative px-4 py-3 font-medium tabular-nums text-muted-foreground">
+                        <span className="absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-r-full bg-primary transition-all duration-300 group-hover:h-3/5" />
+                        <span className="inline-block transition-transform duration-200 group-hover:translate-x-1">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-medium">{s.productName}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{s.customerName || "—"}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">{s.quantity}</td>
+                      <td className="px-4 py-3 text-right font-medium tabular-nums">{formatTZS(s.totalPrice)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <Badge variant="secondary" className="rounded-md whitespace-nowrap font-medium">{s.paymentMethod}</Badge>
+                          {isVoided && (
+                            <Badge className="rounded-md whitespace-nowrap bg-destructive/10 text-destructive">{t("sales.voided")}</Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{s.date}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-60 transition-all duration-200 group-hover:opacity-100">
+                          {!isVoided && permissions.canVoidSale && (
+                            <Button size="sm" variant="outline" onClick={() => setVoidTarget(s)} className="gap-2 transition-transform duration-200 hover:-translate-y-0.5 hover:border-destructive/40 hover:text-destructive">
+                              <Undo2 className="h-4 w-4" />
+                              {t("sales.void")}
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" onClick={() => setLastCompletedSale(s)} className="gap-2 transition-transform duration-200 hover:-translate-y-0.5">
+                            <Printer className="h-4 w-4" />
+                            Receipt
+                          </Button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="grid gap-3 md:hidden">
+        {rows.length === 0 ? (
+          <div className="rounded-xl border border-dashed py-12 text-center text-muted-foreground">
+            <ShoppingCart className="mx-auto h-8 w-8 mb-3 opacity-20" />
+            {t("sales.noSales")}
+          </div>
+        ) : rows.map((s, i) => (
+          <motion.div
+            key={s.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, delay: Math.min(i, 12) * 0.03, ease: [0.22, 1, 0.36, 1] }}
+            className="rounded-xl border bg-card p-4 shadow-sm"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-medium truncate">{s.productName}</p>
+                <p className="text-xs text-muted-foreground truncate">{s.customerName || "—"}</p>
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <Badge variant="secondary" className="rounded-md whitespace-nowrap">{s.paymentMethod}</Badge>
+                {isVoided && (
+                  <Badge className="rounded-md whitespace-nowrap bg-destructive/10 text-destructive">{t("sales.voided")}</Badge>
+                )}
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <div className="text-xs text-muted-foreground">{s.quantity} pcs · {s.date}</div>
+              <div className="font-semibold tabular-nums">{formatTZS(s.totalPrice)}</div>
+            </div>
+            <div className="mt-3 flex justify-end gap-2 border-t pt-3">
+              {!isVoided && permissions.canVoidSale && (
+                <Button size="sm" variant="outline" className="gap-2 hover:border-destructive/40 hover:text-destructive" onClick={() => setVoidTarget(s)}>
+                  <Undo2 className="h-4 w-4" /> {t("sales.void")}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" className="gap-2" onClick={() => setLastCompletedSale(s)}>
+                <Printer className="h-4 w-4" /> Receipt
+              </Button>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </>
+  );
 
 
   return (
@@ -479,6 +633,7 @@ export default function Sales() {
                   {([
                     ["completed", t("sales.completedTab"), completedSales.length],
                     ["drafts", t("sales.draftsTab"), draftSales.length],
+                    ["voided", t("sales.voidedTab"), voidedSales.length],
                   ] as const).map(([value, label, count]) => (
                     <TabsTrigger key={value} value={value} className="relative gap-2 transition-all duration-200 data-[state=active]:shadow-sm">
                       <span>{label}</span>
@@ -498,109 +653,11 @@ export default function Sales() {
               </div>
 
               <TabsContent value="completed" className="mt-0 outline-none">
-                {/* Desktop table */}
-                <div className="hidden md:block rounded-xl border bg-card overflow-hidden shadow-sm">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left [&_th]:whitespace-nowrap [&_td]:whitespace-nowrap">
-                      <thead className="sticky top-0 z-10 text-xs text-muted-foreground bg-muted/50 backdrop-blur uppercase">
-                        <tr>
-                          <th className="px-4 py-3 font-medium w-[60px]">#</th>
-                          <th className="px-4 py-3 font-medium">{t("sales.product")}</th>
-                          <th className="px-4 py-3 font-medium">{t("sales.customer")}</th>
-                          <th className="px-4 py-3 font-medium text-right">{t("sales.quantity")}</th>
-                          <th className="px-4 py-3 font-medium text-right">{t("sales.total")}</th>
-                          <th className="px-4 py-3 font-medium text-center w-[120px]">{t("sales.payment")}</th>
-                          <th className="px-4 py-3 font-medium">{t("sales.date")}</th>
-                          <th className="px-4 py-3 font-medium text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {filtered.length === 0 ? (
-                          <tr>
-                            <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
-                              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                                <ShoppingCart className="mx-auto h-8 w-8 mb-3 opacity-20" />
-                                {t("sales.noSales")}
-                              </motion.div>
-                            </td>
-                          </tr>
-                        ) : (
-                          <AnimatePresence initial={false} mode="popLayout">
-                            {filtered.map((s, i) => (
-                              <motion.tr
-                                key={s.id}
-                                layout
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -6 }}
-                                transition={{ duration: 0.28, delay: Math.min(i, 12) * 0.03, ease: [0.22, 1, 0.36, 1] }}
-                                className="group relative transition-colors duration-200 hover:bg-primary/5"
-                              >
-                                <td className="relative px-4 py-3 font-medium tabular-nums text-muted-foreground">
-                                  <span className="absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-r-full bg-primary transition-all duration-300 group-hover:h-3/5" />
-                                  <span className="inline-block transition-transform duration-200 group-hover:translate-x-1">
-                                    {String(i + 1).padStart(2, "0")}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 font-medium">{s.productName}</td>
-                                <td className="px-4 py-3 text-muted-foreground">{s.customerName || "—"}</td>
-                                <td className="px-4 py-3 text-right tabular-nums">{s.quantity}</td>
-                                <td className="px-4 py-3 text-right font-medium tabular-nums">{formatTZS(s.totalPrice)}</td>
-                                <td className="px-4 py-3 text-center">
-                                  <Badge variant="secondary" className="rounded-md whitespace-nowrap font-medium">{s.paymentMethod}</Badge>
-                                </td>
-                                <td className="px-4 py-3 text-muted-foreground">{s.date}</td>
-                                <td className="px-4 py-3 text-right">
-                                  <div className="flex items-center justify-end gap-2 opacity-60 transition-all duration-200 group-hover:opacity-100">
-                                    <Button size="sm" variant="outline" onClick={() => setLastCompletedSale(s)} className="gap-2 transition-transform duration-200 hover:-translate-y-0.5">
-                                      <Printer className="h-4 w-4" />
-                                      Receipt
-                                    </Button>
-                                  </div>
-                                </td>
-                              </motion.tr>
-                            ))}
-                          </AnimatePresence>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                {renderSaleRows(filtered, false)}
+              </TabsContent>
 
-                {/* Mobile cards */}
-                <div className="grid gap-3 md:hidden">
-                  {filtered.length === 0 ? (
-                    <div className="rounded-xl border border-dashed py-12 text-center text-muted-foreground">
-                      <ShoppingCart className="mx-auto h-8 w-8 mb-3 opacity-20" />
-                      {t("sales.noSales")}
-                    </div>
-                  ) : filtered.map((s, i) => (
-                    <motion.div
-                      key={s.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.28, delay: Math.min(i, 12) * 0.03, ease: [0.22, 1, 0.36, 1] }}
-                      className="rounded-xl border bg-card p-4 shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-medium truncate">{s.productName}</p>
-                          <p className="text-xs text-muted-foreground truncate">{s.customerName || "—"}</p>
-                        </div>
-                        <Badge variant="secondary" className="rounded-md whitespace-nowrap">{s.paymentMethod}</Badge>
-                      </div>
-                      <div className="mt-3 flex items-center justify-between">
-                        <div className="text-xs text-muted-foreground">{s.quantity} pcs · {s.date}</div>
-                        <div className="font-semibold tabular-nums">{formatTZS(s.totalPrice)}</div>
-                      </div>
-                      <div className="mt-3 flex justify-end border-t pt-3">
-                        <Button size="sm" variant="outline" className="gap-2" onClick={() => setLastCompletedSale(s)}>
-                          <Printer className="h-4 w-4" /> Receipt
-                        </Button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+              <TabsContent value="voided" className="mt-0 outline-none">
+                {renderSaleRows(filteredVoided, true)}
               </TabsContent>
 
               <TabsContent value="drafts" className="mt-0 outline-none">
@@ -613,6 +670,7 @@ export default function Sales() {
 
 
       <SaleReceipt sale={lastCompletedSale} shopName={currentShop?.name || "Duka"} open={receiptOpen} onClose={closeReceipt} />
+      <VoidSaleDialog shopId={currentShopId} sale={voidTarget} open={!!voidTarget} onClose={() => setVoidTarget(null)} />
     </div>
   );
 }

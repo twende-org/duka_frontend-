@@ -27,6 +27,7 @@ import SEO from "@/components/SEO";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import WizardShell from "@/components/onboarding/WizardShell";
+import { TZ_PHONE_PREFIX, isDialablePhone, phoneForStorage } from "@/lib/phone";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PageLoader } from "@/components/common/Loader";
 import type { Shop } from "@/types";
@@ -171,7 +172,7 @@ export default function BusinessSetupWizard() {
   const [form, setForm] = useState<SetupFormData>(() => ({
     name: "",
     phone: "+255",
-    whatsapp: "",
+    whatsapp: TZ_PHONE_PREFIX,
     productCategories: [],
     productCapabilities: {
       hasVariants: false,
@@ -219,7 +220,7 @@ export default function BusinessSetupWizard() {
         ...prev,
         name: shop.name || prev.name,
         phone: shop.phone || prev.phone,
-        whatsapp: shop.whatsappNumber || "",
+        whatsapp: shop.whatsappNumber || TZ_PHONE_PREFIX,
         productCategories: shop.productCategories ?? [],
         productCapabilities: { ...prev.productCapabilities, ...(shop.productCapabilities ?? {}) },
         inventoryModel: shop.inventoryModel || prev.inventoryModel,
@@ -335,8 +336,8 @@ export default function BusinessSetupWizard() {
   };
 
   const handleNext = async () => {
-    if (step === 1 && (!form.name || !form.phone)) {
-      toast.error(lang === "sw" ? "Tafadhali jaza jina la duka na namba ya simu" : "Please enter shop name and phone");
+    if (step === 1 && (!form.name || !isDialablePhone(form.phone))) {
+      toast.error(lang === "sw" ? "Tafadhali jaza jina la duka na namba kamili ya simu (mfano +255 712 345 678)" : "Please enter the shop name and a full phone number (e.g. +255 712 345 678)");
       return;
     }
     if (step === 2 && form.productCategories.length === 0) {
@@ -363,7 +364,7 @@ export default function BusinessSetupWizard() {
       if (step === 1) {
         await dispatch(editShop({
           id: currentShopId,
-          data: { name: form.name, phone: form.phone, whatsappNumber: form.whatsapp },
+          data: { name: form.name, phone: form.phone, whatsappNumber: phoneForStorage(form.whatsapp) },
         })).unwrap();
       } else if (step === 2) {
         await dispatch(editShop({
@@ -711,7 +712,8 @@ export default function BusinessSetupWizard() {
                   <div>
                     <h4 className="font-bold text-muted-foreground mb-1">{lang === 'sw' ? "Duka lako" : "Shop"}</h4>
                     <p className="font-medium text-lg leading-tight">{form.name || "—"}</p>
-                    <p className="text-muted-foreground">{form.phone}{form.whatsapp ? ` · WhatsApp ${form.whatsapp}` : ""}</p>
+                    <p className="text-muted-foreground">{form.phone}
+{phoneForStorage(form.whatsapp) ? ` · WhatsApp ${phoneForStorage(form.whatsapp)}` : ""}</p>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => setStep(1)}>{lang === 'sw' ? "Badilisha" : "Edit"}</Button>
                 </div>

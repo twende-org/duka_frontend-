@@ -58,6 +58,17 @@ export default function SaleReceipt({ sale, shopName, open, onClose }: Props) {
   const formattedTime = new Date().toLocaleTimeString("sw-TZ", { hour: "2-digit", minute: "2-digit" });
   const unitPrice = sale.quantity > 0 ? sale.totalPrice / sale.quantity : sale.totalPrice;
 
+  // Older sales flattened the cart onto the sale row; newer ones carry lines.
+  const receiptItems = sale.items?.length
+    ? sale.items.map((item) => ({
+        name: item.productName,
+        qty: item.quantity,
+        unit: item.quantity > 0 ? item.subtotal / item.quantity : item.subtotal,
+        total: item.subtotal,
+        imeis: item.imeiNumbers || [],
+      }))
+    : [{ name: sale.productName, qty: sale.quantity, unit: unitPrice, total: sale.totalPrice, imeis: [] as string[] }];
+
   const handlePrint = () => {
     const content = receiptRef.current;
     if (!content) return;
@@ -166,11 +177,20 @@ export default function SaleReceipt({ sale, shopName, open, onClose }: Props) {
               </div>
               
               <div style={{ padding: "2px 0" }}>
-                <div style={{ fontSize: "9.5px", fontWeight: 700, color: "#111" }}>{sale.productName}</div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#444", marginTop: "1px" }}>
-                  <span>{sale.quantity} x {formatTZS(unitPrice)}</span>
-                  <span style={{ fontWeight: 700 }}>{formatTZS(sale.totalPrice)}</span>
-                </div>
+                {receiptItems.map((item, idx) => (
+                  <div key={idx} style={{ padding: "2px 0" }}>
+                    <div style={{ fontSize: "9.5px", fontWeight: 700, color: "#111" }}>{item.name}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#444", marginTop: "1px" }}>
+                      <span>{item.qty} x {formatTZS(item.unit)}</span>
+                      <span style={{ fontWeight: 700 }}>{formatTZS(item.total)}</span>
+                    </div>
+                    {item.imeis.map((imei) => (
+                      <div key={imei} style={{ fontSize: "8px", fontFamily: "monospace", color: "#333", marginTop: "1px", paddingLeft: "4px" }}>
+                        IMEI: {imei}
+                      </div>
+                    ))}
+                  </div>
+                ))}
               </div>
               
               <hr style={{ border: "none", borderTop: "2px solid #111", margin: "6px 0" }} />

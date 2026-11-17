@@ -64,6 +64,9 @@ function appVisibleId(row: Record<string, unknown>): string {
 
 export function fromApiSaleItem(raw: unknown): OrderItem {
   const row = isRecord(raw) ? raw : {};
+  const imeiNumbers = Array.isArray(row.imeiNumbers)
+    ? row.imeiNumbers.filter((v): v is string => typeof v === "string")
+    : [];
   return {
     productId: refId(row.productId),
     productName: stringOr(row.productName),
@@ -71,6 +74,9 @@ export function fromApiSaleItem(raw: unknown): OrderItem {
     // `price` is the list selling price, `subtotal` the discounted line total.
     price: numberOr(row.price ?? row.unitPrice),
     subtotal: numberOr(row.subtotal ?? row.totalPrice),
+    // The backend snapshots the sold IMEIs onto the line, so a voided sale's
+    // receipt still shows which devices it returned to the shelf.
+    ...(imeiNumbers.length > 0 ? { imeiNumbers } : {}),
   };
 }
 
@@ -99,7 +105,7 @@ export function fromApiSale(raw: unknown): Sale {
     customerPhone: optionalString(row.customerPhone),
     customerId: optionalString(row.customerId),
     notes: optionalString(row.notes),
-    status: row.status === "draft" ? "draft" : "completed",
+    status: row.status === "draft" ? "draft" : row.status === "voided" ? "voided" : "completed",
     createdBy: optionalString(refId(row.createdBy)),
     createdByName: optionalString(row.createdByName),
     items: items.length > 0 ? items : undefined,
@@ -145,6 +151,7 @@ function toSalePayload(data: Omit<Sale, "id">, status: "completed" | "draft"): R
       quantity: item.quantity,
       price: item.price,
       subtotal: item.subtotal,
+      ...(item.imeiNumbers?.length ? { imeiNumbers: item.imeiNumbers } : {}),
     })),
   };
   if (data.branchId) payload.branchId = data.branchId;
@@ -258,4 +265,15 @@ export async function confirmDraftSale(
 
 export async function deleteDraftSale(_shopId: string, _date: string, saleId: string): Promise<void> {
   await getApiClient().del<unknown>(`${SALES_PATH}${encodeURIComponent(saleId)}/`);
+}
+
+/**
+ * Reverses a completed sale: stock and the locked IMEI units return to the
+ * shelf, the day summary is recomputed. Owner/manager only server-side; a
+ * draft has moved nothing, so it is deleted instead.
+ */
+export async function voidSale(_shopId: string, saleId: string, reason?: string): Promise<void> {
+  await getApiClient().post<unknown>(`${SALES_PATH}${encodeURIComponent(saleId)}/void/`, {
+    reason: reason?.trim() || undefined,
+  });
 }

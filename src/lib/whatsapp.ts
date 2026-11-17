@@ -29,6 +29,21 @@ export function buildReceiptMessage(sale: Sale, shopName: string): string {
   const formattedDate = dateObj.toLocaleDateString("sw-TZ", { day: "2-digit", month: "2-digit", year: "numeric" });
   const receiptNo = sale.id.slice(0, 8).toUpperCase();
 
+  // Same fallback the printed receipt uses: flat legacy rows become one line.
+  const lines = sale.items?.length
+    ? sale.items.map((item) => {
+        const unit = item.quantity > 0 ? item.subtotal / item.quantity : item.subtotal;
+        return [
+          `📦 *${item.productName}*`,
+          `   ${item.quantity} x ${formatTZS(unit)} = ${formatTZS(item.subtotal)}`,
+          ...(item.imeiNumbers || []).map((imei) => `   IMEI: ${imei}`),
+        ].join("\n");
+      })
+    : [
+        `📦 *${sale.productName}*`,
+        `   ${sale.quantity} x ${formatTZS(unitPrice)}`,
+      ].join("\n");
+
   return [
     `🧾 *RISITI - ${shopName.toUpperCase()}*`,
     `━━━━━━━━━━━━━━━━━`,
@@ -36,8 +51,7 @@ export function buildReceiptMessage(sale: Sale, shopName: string): string {
     `🔢 Nambari: ${receiptNo}`,
     sale.customerName ? `👤 Mteja: ${sale.customerName}` : "",
     `━━━━━━━━━━━━━━━━━`,
-    `📦 *${sale.productName}*`,
-    `   ${sale.quantity} x ${formatTZS(unitPrice)}`,
+    lines,
     `━━━━━━━━━━━━━━━━━`,
     `💰 *JUMLA: ${formatTZS(sale.totalPrice)}*`,
     `💳 Malipo: ${sale.paymentMethod}`,

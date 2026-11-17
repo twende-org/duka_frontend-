@@ -24,7 +24,8 @@ import {
   PackagePlus,
   FileSpreadsheet,
   Download,
-  Upload
+  Upload,
+  ScanLine
 } from "lucide-react";
 import { motion } from "framer-motion";
 import PageHeader from "@/components/common/PageHeader";
@@ -59,6 +60,7 @@ import { getPermissions } from "@/lib/permissions";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ScanToIntakeDialog, type PhotoSubmitResult, type PhotoSubmitRow } from "@/components/products/ScanToIntakeDialog";
 import { ImportProductsDialog } from "@/components/products/ImportProductsDialog";
+import SerialsManagerDialog from "@/components/catalog/SerialsManagerDialog";
 import { getProducts } from "@/lib/api/domains/products";
 import { downloadProductsWorkbook } from "@/lib/excel/productsWorkbook";
 import { toast } from "sonner";
@@ -101,6 +103,7 @@ export default function Inventory() {
   
   const [managingProduct, setManagingProduct] = useState<Product | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [serialsProduct, setSerialsProduct] = useState<Product | null>(null);
   const [adjustmentQty, setAdjustmentQty] = useState<number | string>(0);
   const [adjustmentType, setAdjustmentType] = useState<"in" | "out">("in");
   const [adjustmentReason, setAdjustmentReason] = useState("");
@@ -641,11 +644,18 @@ export default function Inventory() {
                         <p className={cn("text-2xl font-bold leading-none", q <= m ? "text-destructive" : "text-foreground")}>{q}</p>
                         <p className="text-[10px] text-muted-foreground mt-1">Min: {m}</p>
                      </div>
-                     {permissions.canAdjustInventory && (
-                       <Button size="sm" variant="outline" onClick={() => handleManageStock(p)} className="rounded-lg">
+                     <div className="flex items-center gap-2">
+                      {p.requiresImei && (
+                        <Button size="icon" variant="outline" onClick={() => setSerialsProduct(p)} className="rounded-lg" title={t("serials.title")}>
+                          <ScanLine className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {permissions.canAdjustInventory && (
+                        <Button size="sm" variant="outline" onClick={() => handleManageStock(p)} className="rounded-lg">
                           <Boxes className="h-4 w-4 mr-1.5" /> {t("inventory.dhibiti")}
-                       </Button>
-                     )}
+                        </Button>
+                      )}
+                     </div>
                   </div>
                 </div>
               </motion.div>
@@ -706,16 +716,29 @@ export default function Inventory() {
                         </span>
                       </td>
                       <td className="px-4 py-4 text-right">
-                        {permissions.canAdjustInventory && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleManageStock(p)}
-                            className="rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                          >
-                            <Boxes className="h-4 w-4 mr-1.5" /> {t("inventory.dhibiti")}
-                          </Button>
-                        )}
+                        <div className="flex justify-end items-center gap-1.5">
+                          {p.requiresImei && (
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              onClick={() => setSerialsProduct(p)}
+                              className="rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                              title={t("serials.title")}
+                            >
+                              <ScanLine className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {permissions.canAdjustInventory && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleManageStock(p)}
+                              className="rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                            >
+                              <Boxes className="h-4 w-4 mr-1.5" /> {t("inventory.dhibiti")}
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </motion.tr>
                   );
@@ -764,11 +787,18 @@ export default function Inventory() {
                       <p className="text-[10px] uppercase text-muted-foreground">Stock</p>
                       <p className="text-xl font-bold leading-none">{q} <span className="text-[10px] font-normal text-muted-foreground">min {m}</span></p>
                     </div>
-                    {permissions.canAdjustInventory && (
-                      <Button size="sm" variant="outline" onClick={() => handleManageStock(p)} className="rounded-lg">
-                        <Boxes className="h-4 w-4 mr-1.5" /> {t("inventory.dhibiti")}
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {p.requiresImei && (
+                        <Button size="icon" variant="outline" onClick={() => setSerialsProduct(p)} className="rounded-lg" title={t("serials.title")}>
+                          <ScanLine className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {permissions.canAdjustInventory && (
+                        <Button size="sm" variant="outline" onClick={() => handleManageStock(p)} className="rounded-lg">
+                          <Boxes className="h-4 w-4 mr-1.5" /> {t("inventory.dhibiti")}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -800,14 +830,20 @@ export default function Inventory() {
       </div>
 
 
+      <SerialsManagerDialog
+        shopId={currentShopId}
+        product={serialsProduct}
+        open={!!serialsProduct}
+        onOpenChange={(v) => { if (!v) setSerialsProduct(null); }}
+      />
+
       {/* Manage Modal */}
       <Dialog open={isManageModalOpen} onOpenChange={setIsManageModalOpen}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t("inventory.manageTitle")}: {managingProduct?.name}</DialogTitle>
           </DialogHeader>
-          <div className="mt-4">
-            <Tabs defaultValue="adjustments" className="w-full">
+          <div className="mt-4">            <Tabs defaultValue="adjustments" className="w-full">
               <TabsList className="grid w-full grid-cols-3 mb-4">
                 <TabsTrigger value="adjustments" className="text-xs">Marekebisho</TabsTrigger>
                 <TabsTrigger value="settings" className="text-xs">Mipangilio</TabsTrigger>

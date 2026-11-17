@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
-import { Plus, Search, Edit, Trash2, Package, Eye, ChevronDown, ChevronUp, Loader2, ImagePlus, X, Box, Copy, Images, Camera, Sparkles, Check, LayoutGrid, List, AlertTriangle, TrendingUp, Coins, Store, ScanLine } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, PackagePlus, Eye, ChevronDown, ChevronUp, Loader2, ImagePlus, X, Box, Copy, Images, Camera, Sparkles, Check, LayoutGrid, List, AlertTriangle, TrendingUp, Coins, Store, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -62,6 +62,8 @@ import { fetchTikTokConnection } from "@/lib/api/domains/tiktok";
 import { TikTokIcon } from "@/components/shops/TikTokConnect";
 import TikTokPublishDialog from "@/components/shops/TikTokPublishDialog";
 import AIAdGeneratorDialog from "@/components/shops/AIAdGeneratorDialog";
+import TapToAddCatalogDialog from "@/components/catalog/TapToAddCatalogDialog";
+import SerialsManagerDialog from "@/components/catalog/SerialsManagerDialog";
 import { ScanToIntakeDialog, type PhotoSubmitResult, type PhotoSubmitRow } from "@/components/products/ScanToIntakeDialog";
 import Fuse from "fuse.js";
 
@@ -108,8 +110,10 @@ export default function Products() {
   const [search, setSearch] = useState("");
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
+  const [serialsProduct, setSerialsProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [form, setForm] = useState(defaultForm);
@@ -628,7 +632,11 @@ export default function Products() {
         description={t("products.subtitle")}
         actions={
           permissions.canAddProduct && (
-            <Dialog open={dialogOpen} onOpenChange={(v) => {
+            <>
+              <Button variant="outline" onClick={() => setCatalogOpen(true)}>
+                <PackagePlus className="h-4 w-4 mr-2" />{t("catalog.title")}
+              </Button>
+              <Dialog open={dialogOpen} onOpenChange={(v) => {
                 setDialogOpen(v);
                 if (!v) {
                   setEditingProduct(null);
@@ -638,9 +646,9 @@ export default function Products() {
                   setSubmitting(false); // Ensure submitting is reset if closed manually
                 }
               }}>
-              <DialogTrigger asChild>
-                <Button disabled={!canAddProduct && !editingProduct}><Plus className="h-4 w-4 mr-2" />{t("products.add")}</Button>
-              </DialogTrigger>
+                <DialogTrigger asChild>
+                  <Button disabled={!canAddProduct && !editingProduct} className="ml-2"><Plus className="h-4 w-4 mr-2" />{t("products.add")}</Button>
+                </DialogTrigger>
                             <DialogContent className="h-[100dvh] max-h-[100dvh] w-[100vw] max-w-[100vw] overflow-hidden rounded-none bg-background/95 p-4 backdrop-blur-sm grid-rows-[auto_minmax(0,1fr)] sm:h-[95vh] sm:max-h-[95vh] sm:w-[96vw] sm:max-w-[96vw] sm:rounded-3xl sm:p-6">
                 <DialogHeader className="flex flex-row items-center justify-between pr-8 border-b pb-4">
                   <div>
@@ -1064,6 +1072,7 @@ export default function Products() {
               </DialogContent>
 
             </Dialog>
+            </>
           )
         }
       />
@@ -1305,6 +1314,15 @@ export default function Products() {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
+                          {p.requiresImei && (
+                            <button
+                              onClick={() => setSerialsProduct(p)}
+                              className="p-2 bg-background hover:bg-muted text-foreground hover:text-primary rounded-xl transition-all hover:scale-105 shadow-sm border border-border/40"
+                              title={t("serials.title")}
+                            >
+                              <ScanLine className="h-4 w-4" />
+                            </button>
+                          )}
                           {permissions.canEditProduct && (
                             <button
                               onClick={() => handleEdit(p)}
@@ -1396,6 +1414,9 @@ export default function Products() {
                     {/* Touch action row (mobile only) */}
                     <div className="flex border-t border-border/30 md:hidden bg-muted/20">
                       <button onClick={() => setDetailProduct(p)} className="flex-1 py-2 text-center text-muted-foreground hover:text-primary border-r border-border/30 flex justify-center"><Eye className="h-4 w-4" /></button>
+                      {p.requiresImei && (
+                        <button onClick={() => setSerialsProduct(p)} className="flex-1 py-2 text-center text-muted-foreground hover:text-primary border-r border-border/30 flex justify-center" title={t("serials.title")}><ScanLine className="h-4 w-4" /></button>
+                      )}
                       {permissions.canEditProduct && (
                         <button onClick={() => handleEdit(p)} className="flex-1 py-2 text-center text-muted-foreground hover:text-primary border-r border-border/30 flex justify-center"><Edit className="h-4 w-4" /></button>
                       )}
@@ -1483,6 +1504,9 @@ export default function Products() {
                         <td className="py-4 text-right">
                           <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => setDetailProduct(p)} className="p-1.5 hover:bg-background rounded-md shadow-sm border transition-all hover:text-primary" title="View"><Eye className="h-4 w-4" /></button>
+                            {p.requiresImei && (
+                              <button onClick={() => setSerialsProduct(p)} className="p-1.5 hover:bg-background rounded-md shadow-sm border transition-all hover:text-primary" title={t("serials.title")}><ScanLine className="h-4 w-4" /></button>
+                            )}
                             {permissions.canEditProduct && (
                               <button onClick={() => handleEdit(p)} className="p-1.5 hover:bg-background rounded-md shadow-sm border transition-all hover:text-primary" title="Edit"><Edit className="h-4 w-4" /></button>
                             )}
@@ -1571,6 +1595,16 @@ export default function Products() {
                 <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">{t("products.name")}:</span><span className="font-bold">{detailProduct.name}</span></div>
                 <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">{t("products.sellingPrice")}:</span><span className="font-bold">{formatTZS(detailProduct.sellingPrice)}</span></div>
                 <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">{t("products.stock")}:</span><span className="font-bold">{getProductStock(detailProduct.id)?.quantity || 0}</span></div>
+                {detailProduct.requiresImei && (
+                  <button
+                    type="button"
+                    onClick={() => setSerialsProduct(detailProduct)}
+                    className="flex w-full items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-left transition-colors hover:bg-primary/10"
+                  >
+                    <ScanLine className="h-4 w-4 text-primary" />
+                    <span className="flex-1 text-sm font-bold text-primary">{t("serials.title")}</span>
+                  </button>
+                )}
                 {detailProduct.brand && <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">{t("products.brand")}:</span><span className="font-bold">{detailProduct.brand}</span></div>}
                 {detailProduct.sku && <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">SKU:</span><span className="font-bold">{detailProduct.sku}</span></div>}
                 {detailProduct.storeLocation && <div className="flex justify-between border-b pb-2"><span className="text-muted-foreground">{t("products.location") || "Eneo/Side"}:</span><span className="font-bold text-primary">{detailProduct.storeLocation}</span></div>}
@@ -1647,6 +1681,19 @@ export default function Products() {
         onOpenChange={(open) => !open && setProductToShareTikTok(null)}
         product={productToShareTikTok}
         shopId={currentShopId || ""}
+      />
+
+      <TapToAddCatalogDialog
+        shopId={currentShopId}
+        open={catalogOpen}
+        onOpenChange={setCatalogOpen}
+      />
+
+      <SerialsManagerDialog
+        shopId={currentShopId}
+        product={serialsProduct}
+        open={!!serialsProduct}
+        onOpenChange={(v) => { if (!v) setSerialsProduct(null); }}
       />
     </div>
   );

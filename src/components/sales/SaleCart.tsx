@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Plus, Minus, Trash2, Loader2, Percent, LayoutGrid, Search, Clock, ShoppingCart, UserCheck } from "lucide-react";
+import { Plus, Minus, Trash2, Loader2, Percent, LayoutGrid, Search, Clock, ShoppingCart, UserCheck, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import type { Product, Stock, Customer } from "@/types";
 import { useI18n } from "@/lib/i18n";
 import { ProfessionalImage } from "@/components/common/ProfessionalImage";
+import ImeiPickerDialog from "./ImeiPickerDialog";
 import { useAppSelector } from "@/store/hooks";
 import { getCustomers } from "@/lib/api/domains/customers";
 import { type CustomerType, PricingService } from "@/services/PricingService";
@@ -22,6 +23,8 @@ export interface CartItem {
   quantity: number;
   discount: number;
   lineTotal: number;
+  /** The exact devices selling with this line, when the product tracks IMEIs. */
+  imeiNumbers?: string[];
 }
 
 interface Props {
@@ -77,6 +80,12 @@ export default function SaleCart({ products, inventory, onSubmit, canSaveDraft, 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [customerSearch, setCustomerSearch] = useState("");
   const [buyerShopId, setBuyerShopId] = useState("");
+  const [imeiPickerIdx, setImeiPickerIdx] = useState<number | null>(null);
+
+  const imeiBypass = useMemo(
+    () => shops.find((s) => s.id === currentShopId)?.storePolicies?.allowSaleWithoutImei === true,
+    [shops, currentShopId]
+  );
 
   const otherShops = useMemo(
     () => shops.filter((s) => s.id !== currentShopId),
@@ -237,6 +246,7 @@ export default function SaleCart({ products, inventory, onSubmit, canSaveDraft, 
     setSelectedCustomerId("");
     setCustomerSearch("");
     setBuyerShopId("");
+    setImeiPickerIdx(null);
   };
 
   const handleSubmit = async (asDraft: boolean) => {
@@ -260,6 +270,20 @@ export default function SaleCart({ products, inventory, onSubmit, canSaveDraft, 
         toast.error(`Credit limit exceeded. Maximum allowed: ${formatTZS(settings.creditLimit)}`);
         return;
       }
+    }
+
+    // An IMEI-tracked line must name exactly the devices leaving the counter;
+    // the backend rejects the sale otherwise, so catch it before the request.
+    const imeiLine = validCart.find((c) => {
+      if (!c.product.requiresImei) return false;
+      const picked = c.imeiNumbers?.length || 0;
+      if (picked === 0 && imeiBypass) return false;
+      return picked !== (Number(c.quantity) || 0);
+    });
+    if (imeiLine) {
+      toast.error(t("sales.imeiMissing"));
+      setImeiPickerIdx(cart.indexOf(imeiLine));
+      return;
     }
 
     const validation = PaymentService.getInstance().processPayments(cartTotal, [
@@ -489,6 +513,21 @@ export default function SaleCart({ products, inventory, onSubmit, canSaveDraft, 
                           </button>
                         </div>
                         <p className="text-xs font-bold text-primary/70">{formatTZS(PricingService.getInstance().calculatePrice(item.product, item.quantity, customerType))} / {item.product.unit || "pcs"}</p>
+                        {item.product.requiresImei && (() => {
+                          const picked = item.imeiNumbers?.length || 0;
+                          const needed = Number(item.quantity) || 0;
+                          const ok = picked > 0 && picked === needed;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setImeiPickerIdx(idx)}
+                              className={`mt-1.5 flex w-fit items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-black uppercase tracking-wider transition-colors ${ok ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600" : "border-amber-500/40 bg-amber-500/10 text-amber-600"}`}
+                            >
+                              <ScanLine className="h-3 w-3" />
+                              {t("sales.imeiLineCount").replace("{n}", String(picked)).replace("{m}", String(needed))}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                     
@@ -676,12 +715,12 @@ export default function SaleCart({ products, inventory, onSubmit, canSaveDraft, 
               )}
             </Button>
             {canSaveDraft && (
-              <Button 
+              <Button
                 type="button"
-                onClick={() => handleSubmit(true)} 
-                variant="outline" 
-                size="lg" 
-                className="w-full sm:w-auto h-12 sm:h-16 rounded-2xl text-xs font-black uppercase tracking-widest border-2 hover:bg-muted shrink-0" 
+                onClick={() => handleSubmit(true)}
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto h-12 sm:h-16 rounded-2xl text-xs font-black uppercase tracking-widest border-2 hover:bg-muted shrink-0"
                 disabled={cart.length === 0 || submitting}
               >
                 {t("sales.saveDraft")}
@@ -690,6 +729,22 @@ export default function SaleCart({ products, inventory, onSubmit, canSaveDraft, 
           </div>
         </div>
       </div>
+
+      {imeiPickerIdx !== null && cart[imeiPickerIdx] && (
+        <ImeiPickerDialog
+          product={cart[imeiPickerIdx].product}
+          required={Number(cart[imeiPickerIdx].quantity) || 0}
+          selected={cart[imeiPickerIdx].imeiNumbers || []}
+          open
+          onClose={() => setImeiPickerIdx(null)}
+          onConfirm={(imeis) => {
+            const updated = [...cart];
+            updated[imeiPickerIdx] = { ...updated[imeiPickerIdx], imeiNumbers: imeis };
+            setCart(updated);
+            setImeiPickerIdx(null);
+          }}
+        />
+      )}
     </div>
   );
 }

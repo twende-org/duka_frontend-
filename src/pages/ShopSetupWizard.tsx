@@ -7,6 +7,7 @@ import { editShop } from "@/store/shopsSlice";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import SEO from "@/components/SEO";
+import { TZ_PHONE_PREFIX, phoneForStorage } from "@/lib/phone";
 import {
   BrandingStep, ContactStep, HoursStep, BusinessInfoStep, PricingStep,
   InventoryStep, CustomersStep, PaymentStep, OnlineStoreStep,
@@ -40,8 +41,8 @@ export default function ShopSetupWizard() {
   const [formData, setFormData] = useState<any>({
     slogan: shop?.slogan || "",
     description: shop?.description || "",
-    phone: shop?.phone || "",
-    whatsappNumber: shop?.whatsappNumber || "",
+    phone: shop?.phone || TZ_PHONE_PREFIX,
+    whatsappNumber: shop?.whatsappNumber || TZ_PHONE_PREFIX,
     website: shop?.website || "",
     operatingHours: shop?.operatingHours || "",
     timezone: shop?.timezone || "Africa/Dar_es_Salaam",
@@ -67,7 +68,7 @@ export default function ShopSetupWizard() {
     setSaving(true);
     try {
       // Save progress incrementally
-      await dispatch(editShop({ id: shop.id, data: { ...formData, setupProgress: activeStep + 1 } })).unwrap();
+      await dispatch(editShop({ id: shop.id, data: { ...formData, phone: phoneForStorage(formData.phone), whatsappNumber: phoneForStorage(formData.whatsappNumber), setupProgress: activeStep + 1 } })).unwrap();
       
       if (activeStep < STEPS.length - 1) {
         setActiveStep((prev) => prev + 1);

@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAppSelector } from "@/store/hooks";
 import { useI18n } from "@/lib/i18n";
-import { Store, Phone, Clock, FileText, Tag, Package, Users, CreditCard, ShoppingBag, Share2, ShieldCheck } from "lucide-react";
+import { Store, Phone, Clock, FileText, Tag, Package, PackagePlus, Users, CreditCard, ShoppingBag, Share2, ShieldCheck } from "lucide-react";
+import TapToAddCatalogDialog from "@/components/catalog/TapToAddCatalogDialog";
 
 interface StepProps {
   formData: any;
@@ -163,6 +167,8 @@ export function PricingStep() {
 
 export function InventoryStep({ formData, setFormData }: StepProps) {
   const { lang } = useI18n();
+  const currentShopId = useAppSelector((s) => s.shops.currentShopId);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between p-4 border rounded-xl">
@@ -172,11 +178,29 @@ export function InventoryStep({ formData, setFormData }: StepProps) {
             {lang === 'sw' ? "Washa ikiwa utafuatilia idadi ya bidhaa." : "Enable if you want to track product quantities."}
           </p>
         </div>
-        <Switch 
-          checked={formData.keepsStock !== false} 
-          onCheckedChange={(val) => setFormData({ ...formData, keepsStock: val })} 
+        <Switch
+          checked={formData.keepsStock !== false}
+          onCheckedChange={(val) => setFormData({ ...formData, keepsStock: val })}
         />
       </div>
+      <div className="flex items-start gap-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <PackagePlus className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <Label>{lang === 'sw' ? "Anza na bidhaa maarufu" : "Start with popular products"}</Label>
+          <p className="text-sm text-muted-foreground">
+            {lang === 'sw'
+              ? "Chagua simu na electronics kutoka kwenye katalogi ya Twende Duka — bei zako na IMEI za mabox zinaingia mara moja."
+              : "Pick phones and electronics from the Twende Duka catalog — your prices and box IMEIs come straight in."}
+          </p>
+          <Button className="mt-3 w-full sm:w-auto" onClick={() => setCatalogOpen(true)}>
+            <PackagePlus className="mr-2 h-4 w-4" />
+            {lang === 'sw' ? "Ongeza Kutoka Katalogi" : "Add from Catalog"}
+          </Button>
+        </div>
+      </div>
+      <TapToAddCatalogDialog shopId={currentShopId} open={catalogOpen} onOpenChange={setCatalogOpen} />
     </div>
   );
 }
